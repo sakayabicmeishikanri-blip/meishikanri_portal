@@ -60,10 +60,8 @@ window.addEventListener('load', () => {
 
     // 撮影処理
     function takeSnapshot() {
-      if (typeof cv === 'undefined') {
-        alert("OpenCVロード中です。お待ちください。");
-        return;
-      }
+      // 1. 撮影確認のアラート
+      alert("撮影開始！映像をCanvasにコピーします");
 
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
@@ -71,14 +69,30 @@ window.addEventListener('load', () => {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0);
 
-      let src = cv.imread(canvas);
-      let dst = new cv.Mat();
-      cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
-
+      // 2. まずは元の映像をそのまま表示（これで出ればOK）
       const outputCanvas = document.getElementById('outputCanvas');
-      outputCanvas.width = dst.cols;
-      outputCanvas.height = dst.rows;
-      
+      outputCanvas.width = canvas.width;
+      outputCanvas.height = canvas.height;
+      outputCanvas.getContext('2d').drawImage(canvas, 0, 0);
+
+      // 3. 次にOpenCVの処理を確認
+      try {
+        let src = cv.imread(canvas);
+        let dst = new cv.Mat();
+        cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+        
+        // 処理後の画像を表示
+        cv.imshow('outputCanvas', dst);
+        
+        src.delete();
+        dst.delete();
+        console.log("OpenCV処理完了");
+      } catch (err) {
+        alert("OpenCV処理でエラー: " + err.message);
+      }
+    }
+
+     
       const imgData = new ImageData(new Uint8ClampedArray(dst.data, dst.cols, dst.rows), dst.cols, dst.rows);
       outputCanvas.getContext('2d').putImageData(imgData, 0, 0);
       
