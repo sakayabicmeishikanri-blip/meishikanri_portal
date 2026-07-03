@@ -33,6 +33,28 @@
     // ここでカメラ起動の処理を開始すると確実です
     startCamera();
   }
+
+    document.getElementById('snap').addEventListener('click', () => {
+    const video = document.getElementById('video');
+    const canvas = document.createElement('canvas'); // 内部処理用
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    // CanvasからOpenCVのMatへ変換
+    let src = cv.imread(canvas);
+    
+    // ここで画像処理（グレースケール化やトリミング）を実行
+    let dst = new cv.Mat();
+    cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY); // 例：グレースケール化
+    
+    // 結果をCanvasに表示（または送信処理へ）
+    cv.imshow('outputCanvas', dst);
+    
+    // 後始末（メモリリークを防ぐために重要）
+    src.delete(); 
+    dst.delete();
+});
 </script>
 </body>
 </html>
