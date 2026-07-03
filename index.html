@@ -31,27 +31,40 @@
     startCamera();
 
     document.getElementById('snap').addEventListener('click', () => {
-      // 1. 一時的なCanvasを作成して映像をキャプチャ
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = video.videoWidth;
       tempCanvas.height = video.videoHeight;
       tempCanvas.getContext('2d').drawImage(video, 0, 0);
 
-      // 2. OpenCVで処理
+      // 1. OpenCVで読み込み
       let src = cv.imread(tempCanvas);
       let dst = new cv.Mat();
+      let gray = new cv.Mat();
+      let canny = new cv.Mat();
+      let contours = new cv.MatVector();
+      let hierarchy = new cv.Mat();
+
+      // 2. グレースケール → ぼかし → エッジ検出（Canny）
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
+      cv.Canny(gray, canny, 50, 150);
+
+      // 3. 輪郭を探す
+      cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+      // 4. 輪郭を描画（赤色で線を引く）
+      dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
+      for (let i = 0; i < contours.size(); ++i) {
+        cv.drawContours(dst, contours, i, new cv.Scalar(255, 0, 0, 255), 2);
+      }
       
-      // グレースケール変換
-      cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
-      
-      // 3. 結果を表示
+      // 5. 表示
       cv.imshow('outputCanvas', dst);
       
-      // 4. メモリ解放
-      src.delete();
-      dst.delete();
+      // 6. メモリ解放
+      src.delete(); dst.delete(); gray.delete(); canny.delete(); contours.delete(); hierarchy.delete();
       
-      alert("グレースケール変換完了！");
+      alert("輪郭抽出完了！");
     });
   </script>
 </body>
