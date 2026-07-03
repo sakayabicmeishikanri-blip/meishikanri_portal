@@ -138,7 +138,6 @@ function warpPerspective(src, contours) {
     let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
         0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight
     ]);
-
     let M = cv.getPerspectiveTransform(srcTri, dstTri);
     let dst = new cv.Mat();
     cv.warpPerspective(src, dst, M, new cv.Size(dstWidth, dstHeight));
