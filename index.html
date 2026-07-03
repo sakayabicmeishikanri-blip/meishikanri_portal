@@ -21,10 +21,8 @@
   <div>検出結果:</div>
   <canvas id="outputCanvas"></canvas>
 
-  <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js" onload="onOpenCvReady();"></script>
   <script>
-    let src, dst;
-
+    // 1. 関数を先に定義
     function onOpenCvReady() {
       console.log("OpenCV.js is ready!");
       startCamera();
@@ -41,6 +39,14 @@
       }
     }
 
+    // 2. 動的にOpenCVを読み込む（エラー回避のため）
+    let script = document.createElement('script');
+    script.src = "https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js";
+    script.onload = onOpenCvReady;
+    document.body.appendChild(script);
+
+    // 3. 撮影ボタンの処理
+    let src, dst;
     document.getElementById('snap').addEventListener('click', () => {
       const video = document.getElementById('video');
       const canvas = document.createElement('canvas');
@@ -62,7 +68,6 @@
       cv.Canny(blurred, edged, 75, 200);
 
       cv.imshow('outputCanvas', edged);
-
       gray.delete(); blurred.delete(); edged.delete();
     });
   </script>
