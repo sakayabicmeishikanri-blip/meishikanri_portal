@@ -135,15 +135,10 @@
       },
       body: JSON.stringify({ fileName: fileName, image: imageData })
     });
-    
-    // 成功した場合の結果を表示
-    const text = await response.text();
-    alert("通信成功: " + text);
-    
+   const result = await response.json();
+    alert("成功しました！");
   } catch (error) {
-    // ここで詳細なエラー内容を表示
-    alert("通信エラー詳細: " + error.message);
-    console.error("詳細エラー:", error);
+    alert("エラー: " + error.message);
   }
 }
   </script>
