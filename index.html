@@ -26,53 +26,57 @@
     
 
 <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js" onload="onOpenCvReady();"></script>
-    
+
 <script>
-// グローバル変数として宣言しておく
-  let src, dst;
-  // OpenCVが読み込まれたら呼ばれる関数
+  let src, dst; // グローバル変数
+
   function onOpenCvReady() {
     console.log("OpenCV.js is ready!");
-    // ここでカメラ起動の処理を開始すると確実です
     startCamera();
   }
 
-    document.getElementById('snap').addEventListener('click', () => {
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } }
+      });
+      const video = document.getElementById('video');
+      video.srcObject = stream;
+      video.play();
+    } catch (err) {
+      alert("カメラ起動失敗: " + err.message);
+    }
+  }
+
+  document.getElementById('snap').addEventListener('click', () => {
     const video = document.getElementById('video');
-    const canvas = document.createElement('canvas'); // 内部処理用
+    const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
-        
-// 変数宣言を let から変更（再宣言しない）
+
+    // メモリ解放
     if (src) src.delete();
     if (dst) dst.delete();
 
+    // 読み込みと画像処理
+    src = cv.imread(canvas);
+    dst = new cv.Mat();
+    let gray = new cv.Mat();
     
-    // 【重要】撮影ボタン内の画像処理部分を以下のように書き換えます
-let src = cv.imread(canvas);
-let gray = new cv.Mat();
-cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);// 例：グレースケール化
-cv.imshow('outputCanvas', dst);        
+    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+    
+    // 輪郭検出のパイプライン
+    let blurred = new cv.Mat();
+    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+    let edged = new cv.Mat();
+    cv.Canny(blurred, edged, 75, 200);
 
-// 1. ノイズ除去と輪郭検出
-let blurred = new cv.Mat();
-cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-let edged = new cv.Mat();
-cv.Canny(blurred, edged, 75, 200);
+    // 結果を画面に表示 (dstに加工後の画像をセット)
+    cv.imshow('outputCanvas', edged); 
 
-// 2. 輪郭を探す
-let contours = new cv.MatVector();
-let hierarchy = new cv.Mat();
-cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);        
-    
-    // 結果をCanvasに表示（または送信処理へ）
-    cv.imshow('outputCanvas', dst);
-    
-    // 4. メモリ解放（必須！）
-src.delete(); gray.delete(); blurred.delete(); edged.delete(); contours.delete(); hierarchy.delete();
-        
-});
+    // メモリ解放
+    gray.delete(); blurred.delete(); edged.delete();
+    // srcとdstは次の撮影のために保持またはここでdelete
+  });
 </script>
-</body>
-</html>
