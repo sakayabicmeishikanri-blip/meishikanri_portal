@@ -36,6 +36,7 @@
         video.srcObject = stream;
         video.play();
 
+        // 2秒後にボタンを有効化
         setTimeout(() => {
           const btn = document.getElementById('snap');
           btn.disabled = false;
@@ -48,10 +49,10 @@
     }
     startCamera();
 
-    // 撮影処理（関数内を整理しました）
+    // 撮影処理
     function takeSnapshot() {
       if (typeof cv === 'undefined') {
-        alert("OpenCVロード中です。もう少々お待ちください。");
+        alert("OpenCVロード中です。お待ちください。");
         return;
       }
 
@@ -69,7 +70,6 @@
       outputCanvas.width = dst.cols;
       outputCanvas.height = dst.rows;
       
-      // 描画
       const imgData = new ImageData(new Uint8ClampedArray(dst.data, dst.cols, dst.rows), dst.cols, dst.rows);
       outputCanvas.getContext('2d').putImageData(imgData, 0, 0);
       
