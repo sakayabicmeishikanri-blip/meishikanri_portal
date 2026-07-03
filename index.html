@@ -66,6 +66,12 @@
       let src = cv.imread(canvas);
       let dst = new cv.Mat();
       cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+
+      // ★ここを追加：表示用Canvasのサイズを強制的に合わせる
+      let outputCanvas = document.getElementById('outputCanvas');
+      outputCanvas.width = src.cols;
+      outputCanvas.height = src.rows;
+      
       cv.imshow('outputCanvas', dst);
       
       src.delete(); 
