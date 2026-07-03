@@ -1,0 +1,16 @@
+name: Upload Image to Form
+on:
+  push:
+    paths:
+      - 'images/**' # imagesフォルダに画像が入ったら実行
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Send to Google Form
+        run: |
+          curl -L -X POST "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdOZioLDFzmy7J2Fqo5Cj374Akb5MFnmn46gHXNx0nwbvDeMA/formResponse" \
+          -d "entry.158646122=${{ github.event.head_commit.message }}" \
+          -F "file=@images/card.jpg" # ファイルアップロードの場合
