@@ -11,12 +11,22 @@
     
 <script>
   // 背面カメラの優先起動
-  async function startCamera() {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { exact: "environment" } }
-    });
-    document.getElementById('video').srcObject = stream;
-  }
+// 背面カメラを優先、ダメならフロントでも起動する設定
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: { ideal: "environment" } // "exact" ではなく "ideal" に変更
+            }
+        });
+        document.getElementById('video').srcObject = stream;
+    } catch (err) {
+        console.error("カメラ起動エラー: ", err);
+        alert("カメラへのアクセスが拒否されました。設定を確認してください。");
+    }
+}
+
+
   startCamera();
 
   // 撮影・送信処理
