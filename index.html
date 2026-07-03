@@ -22,6 +22,16 @@
   <canvas id="outputCanvas"></canvas>
 
   <script>
+// 画面上にエラーを表示するデバッグ用関数
+  function debugLog(msg) {
+    let div = document.createElement('div');
+    div.style.color = 'red';
+    div.style.fontSize = '12px';
+    div.innerText = msg;
+    document.body.appendChild(div);
+  }
+  window.onerror = (msg) => debugLog("ERROR: " + msg);
+    
     // 1. 関数を先に定義
     function onOpenCvReady() {
       console.log("OpenCV.js is ready!");
@@ -49,6 +59,12 @@
     let src, dst;
 document.getElementById('snap').addEventListener('click', () => {
     const video = document.getElementById('video');
+
+  // ガード：映像サイズが正常か確認
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+        alert("カメラ映像の準備ができていません。映像が表示されてから押してください。");
+        return; 
+    }
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
