@@ -32,102 +32,85 @@
     startCamera();
 
     document.getElementById('snap').addEventListener('click', () => {
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = video.videoWidth;
-      tempCanvas.height = video.videoHeight;
-      tempCanvas.getContext('2d').drawImage(video, 0, 0);
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = video.videoWidth;
+  tempCanvas.height = video.videoHeight;
+  tempCanvas.getContext('2d').drawImage(video, 0, 0);
 
-      // 1. OpenCVで読み込み
-      let src = cv.imread(tempCanvas);
-      let dst = new cv.Mat();
-      let gray = new cv.Mat();
-      let canny = new cv.Mat();
-      let contours = new cv.MatVector();
-      let hierarchy = new cv.Mat();
+  // 1. OpenCVで読み込み
+  let src = cv.imread(tempCanvas);
+  let gray = new cv.Mat();
+  let canny = new cv.Mat();
+  let contours = new cv.MatVector();
+  let hierarchy = new cv.Mat();
 
-      // 2. グレースケール → ぼかし → エッジ検出（Canny）
-      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-      cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
-      cv.Canny(gray, canny, 50, 150);
+  // 2. グレースケール → ぼかし → エッジ検出
+  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+  cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
+  cv.Canny(gray, canny, 50, 150);
 
-      // 3. 輪郭を探す
-      cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+  // 3. 輪郭を探す
+  cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-      // 4. 輪郭を描画（赤色で線を引く）
-      dst = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC3);
-      for (let i = 0; i < contours.size(); ++i) {
-        cv.drawContours(dst, contours, i, new cv.Scalar(255, 0, 0, 255), 2);
-      }
-      
-      // 5. 表示
-      cv.imshow('outputCanvas', dst);
-      
-      // 6. メモリ解放
-      src.delete(); dst.delete(); gray.delete(); canny.delete(); contours.delete(); hierarchy.delete();
-      
-      
-    });
-    // 輪郭から4隅を特定して台形補正するロジック（概念）/**
- * 輪郭から4点を見つけて台形補正する関数
- */
+  // 4. 台形補正関数を実行（ここで呼び出す！）
+  if (contours.size() > 0) {
+    warpPerspective(src, contours);
+  } else {
+    alert("輪郭が見つかりません。");
+  }
+
+  // 5. メモリ解放
+  src.delete(); gray.delete(); canny.delete(); contours.delete(); hierarchy.delete();
+});
+
+// 台形補正関数
 function warpPerspective(src, contours) {
-    // 1. 最大の輪郭（名刺）を見つける
-    let maxArea = 0;
-    let maxContour = null;
-    for (let i = 0; i < contours.size(); ++i) {
-        let area = cv.contourArea(contours.get(i));
-        if (area > maxArea) { maxArea = area; maxContour = contours.get(i); }
-    }
+  let maxArea = 0;
+  let maxContour = null;
+  for (let i = 0; i < contours.size(); ++i) {
+    let area = cv.contourArea(contours.get(i));
+    if (area > maxArea) { maxArea = area; maxContour = contours.get(i); }
+  }
 
-    // 2. 輪郭を4角形に近似する
-    let perimeter = cv.arcLength(maxContour, true);
-    let approx = new cv.Mat();
-    cv.approxPolyDP(maxContour, approx, 0.02 * perimeter, true);
+  let perimeter = cv.arcLength(maxContour, true);
+  let approx = new cv.Mat();
+  cv.approxPolyDP(maxContour, approx, 0.02 * perimeter, true);
 
-    // 頂点が4つでない場合は補正不可
-    if (approx.rows !== 4) {
-        alert("名刺の4隅が検出できませんでした。");
-        approx.delete();
-        return;
-    }
+  if (approx.rows !== 4) {
+    alert("名刺の4隅を検出できませんでした。");
+    approx.delete();
+    return;
+  }
 
-    // 3. 座標を抽出
-    let points = [];
-    for (let i = 0; i < 4; i++) {
-        points.push({ x: approx.data32S[i * 2], y: approx.data32S[i * 2 + 1] });
-    }
+  let points = [];
+  for (let i = 0; i < 4; i++) {
+    points.push({ x: approx.data32S[i * 2], y: approx.data32S[i * 2 + 1] });
+  }
 
-    // 座標並べ替え（y座標でソートし、上側2つと下側2つを分ける）
-    points.sort((a, b) => a.y - b.y);
-    let top = points.slice(0, 2).sort((a, b) => a.x - b.x);
-    let bottom = points.slice(2, 4).sort((a, b) => a.x - b.x);
-    let sortedPoints = [top[0], top[1], bottom[1], bottom[0]]; // 左上, 右上, 右下, 左下
+  points.sort((a, b) => a.y - b.y);
+  let top = points.slice(0, 2).sort((a, b) => a.x - b.x);
+  let bottom = points.slice(2, 4).sort((a, b) => a.x - b.x);
+  let sortedPoints = [top[0], top[1], bottom[1], bottom[0]];
 
-    // ★スマホ確認用：座標をアラートで表示
-    alert("左上:" + sortedPoints[0].x + "," + sortedPoints[0].y + 
-          " 右上:" + sortedPoints[1].x + "," + sortedPoints[1].y);
+  let dstWidth = 400;
+  let dstHeight = 250;
+  let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+    sortedPoints[0].x, sortedPoints[0].y,
+    sortedPoints[1].x, sortedPoints[1].y,
+    sortedPoints[2].x, sortedPoints[2].y,
+    sortedPoints[3].x, sortedPoints[3].y
+  ]);
+  let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+    0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight
+  ]);
 
-    // 4. 変換行列の作成
-    let dstWidth = 400;
-    let dstHeight = 250;
-    let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-        sortedPoints[0].x, sortedPoints[0].y,
-        sortedPoints[1].x, sortedPoints[1].y,
-        sortedPoints[2].x, sortedPoints[2].y,
-        sortedPoints[3].x, sortedPoints[3].y
-    ]);
-    let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-        0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight
-    ]);
-    let M = cv.getPerspectiveTransform(srcTri, dstTri);
-    let dst = new cv.Mat();
-    cv.warpPerspective(src, dst, M, new cv.Size(dstWidth, dstHeight));
+  let M = cv.getPerspectiveTransform(srcTri, dstTri);
+  let dst = new cv.Mat();
+  cv.warpPerspective(src, dst, M, new cv.Size(dstWidth, dstHeight));
 
-    // 5. 結果表示
-    cv.imshow('outputCanvas', dst);
+  cv.imshow('outputCanvas', dst);
 
-    // メモリ解放
-    srcTri.delete(); dstTri.delete(); M.delete(); dst.delete(); approx.delete();
+  srcTri.delete(); dstTri.delete(); M.delete(); dst.delete(); approx.delete();
 }
   </script>
 </body>
