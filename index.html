@@ -125,17 +125,27 @@
     async function sendToGAS(canvas, fileName) {
       const imageData = canvas.toDataURL('image/jpeg', 0.8);
       const GAS_URL = "https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec";
-      try {
-    // mode: 'cors' に変更し、レスポンスを確認する
+     try {
     const response = await fetch(GAS_URL, {
       method: "POST",
+      // modeを "no-cors" から "cors" に一時的に変えてみる
+      mode: "cors", 
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({ fileName: fileName, image: imageData })
     });
-        const result = await response.json();
-        alert("送信成功しました！");
-      } catch (error) { alert("送信失敗: " + error); }
-    }
-  
+    
+    // 成功した場合の結果を表示
+    const text = await response.text();
+    alert("通信成功: " + text);
+    
+  } catch (error) {
+    // ここで詳細なエラー内容を表示
+    alert("通信エラー詳細: " + error.message);
+    console.error("詳細エラー:", error);
+  }
+}
   </script>
 </body>
 </html>
