@@ -24,79 +24,15 @@
 <button id="snap">撮影して送信</button>
 <canvas id="canvas" style="display:none;"></canvas>
     
+ <script async src="https://docs.opencv.org/master/opencv.js"></script>
     
 <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: "environment" } }
-                });
-                video.srcObject = stream;
-            } catch (err) { alert("カメラ起動失敗: " + err); }
-        }
-        startCamera();
-
-        document.getElementById('snap').addEventListener('click', async () => {
-            const btn = document.getElementById('snap');
-            btn.disabled = true; // 連打防止
-            btn.innerText = "送信中...";
-          
-
-document.getElementById('snap').addEventListener('click', async () => {
-    const btn = document.getElementById('snap');
-    btn.disabled = true; // 連打防止
-    btn.innerText = "送信中...";
-
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const guide = document.getElementById('guide-frame'); // HTMLで作ったガイド枠
-
-    // ★修正ポイント: 動画要素とガイド枠の相対的な位置関係を取得
-    const videoRect = video.getBoundingClientRect();
-    const guideRect = guide.getBoundingClientRect();
-
-    // ビデオ要素内でのガイド枠の相対位置を計算
-    const scaleX = video.videoWidth / videoRect.width;
-    const scaleY = video.videoHeight / videoRect.height;
-
-    const cropX = (guideRect.left - videoRect.left) * scaleX;
-    const cropY = (guideRect.top - videoRect.top) * scaleY;
-    const cropW = guideRect.width * scaleX;
-    const cropH = guideRect.height * scaleY;
-
-    // Canvasサイズをトリミング後のサイズに設定
-    canvas.width = cropW;
-    canvas.height = cropH;
-    
-    // ★重要: ガイド部分だけをCanvasに描画
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-    // 送信用のデータ生成 (Base64)
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    
-    // あとはこの imageData を GAS に送信 (fetch処理は前のままでOK)
-    try {
-        await fetch('あなたのGASのWebアプリURL', {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify({ 
-                image: imageData, 
-                fileName: "card_" + Date.now() + ".jpg" 
-            })
-        });
-        alert('送信しました！');
-    } catch (e) {
-        console.error(e);
-        alert('送信エラー');
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "撮影して送信";
-    }
-});
-    </script>
+  // OpenCVが読み込まれたら呼ばれる関数
+  function onOpenCvReady() {
+    console.log("OpenCV.js is ready!");
+    // ここでカメラ起動の処理を開始すると確実です
+    startCamera();
+  }
+</script>
 </body>
 </html>
