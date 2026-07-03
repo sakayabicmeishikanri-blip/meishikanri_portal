@@ -5,19 +5,39 @@
 </head>
 <body>
     <h1>名刺読み取り</h1>
-    <video id="video" width="100%" autoplay></video>
-    <button id="snap">撮影して保存</button>
-    <canvas id="canvas" style="display:none;"></canvas>
+<video id="video" playsinline autoplay></video>
+<button id="snap">撮影して送信</button>
+<canvas id="canvas" style="display:none;"></canvas>
     
-    <script>
-        // カメラの起動
-        const video = document.getElementById('video');
-        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => { video.srcObject = stream; });
+<script>
+  // 背面カメラの優先起動
+  async function startCamera() {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { exact: "environment" } }
+    });
+    document.getElementById('video').srcObject = stream;
+  }
+  startCamera();
 
-        // 撮影とドライブへの送信（ここはGoogleドライブのAPI/GASのURLへ飛ばす）
-        document.getElementById('snap').addEventListener('click', () => {
-            // ここでcanvasに描画し、データを取得してGASのWebアプリURLへ送信
-        });
-    </script>
+  // 撮影・送信処理
+  document.getElementById('snap').addEventListener('click', async () => {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    // Base64形式に変換
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    
+    // GASのWebアプリURLへ送信（後述の手順で取得します）
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec';
+    await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ image: imageData, fileName: "card_" + Date.now() + ".jpg" })
+    });
+    alert('送信しました！');
+  });
+</script>
 </body>
 </html>
