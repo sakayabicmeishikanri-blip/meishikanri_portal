@@ -122,25 +122,29 @@
       retryBtn.click();
     });
 
-    async function sendToGAS(canvas, fileName) {
-      const imageData = canvas.toDataURL('image/jpeg', 0.8);
-      const GAS_URL = "https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec";
-     try {
-    const response = await fetch(GAS_URL, {
-      method: "POST",
-      // modeを "no-cors" から "cors" に一時的に変えてみる
-      mode: "cors", 
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ fileName: fileName, image: imageData })
-    });
-   const result = await response.json();
-    alert("成功しました！");
-  } catch (error) {
-    alert("エラー: " + error.message);
+async function uploadCanvas() {
+    const canvas = document.getElementById('outputCanvas');
+    const base64 = canvas.toDataURL('image/jpeg', 0.8); // Canvasを画像に変換
+    
+    try {
+      const response = await fetch("https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec", {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          fileName: "card_" + Date.now() + ".jpg", 
+          image: base64 
+        })
+      });
+      alert("送信完了しました！");
+    } catch (e) {
+      alert("通信エラー: " + e.message);
+    }
   }
-}
+
+   // sendBtnに紐付け
+  sendBtn.addEventListener('click', uploadCanvas);
+   
   </script>
 </body>
 </html>
