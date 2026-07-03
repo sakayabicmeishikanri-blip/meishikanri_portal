@@ -23,7 +23,9 @@ jobs:
 
       - name: 'Send to GAS'
         run: |
-          # 認証済み環境なので、これでGASにアクセスできる！
-          curl -L -X POST "https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec" \
+          curl -L -X POST "https://script.google.com/macros/s/【あなたのGASのデプロイID】/exec" \
             -H "Content-Type: application/json" \
-            -d '{"fileName": "card.jpg", "image": "..."}'
+            -d '{
+              "fileName": "test.jpg",
+              "image": "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+            }'
