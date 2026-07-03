@@ -112,6 +112,29 @@ function warpPerspective(src, contours) {
 
   srcTri.delete(); dstTri.delete(); M.delete(); dst.delete(); approx.delete();
 }
+
+    async function sendToGAS(canvas, fileName) {
+  // 1. CanvasからBase64データを取得
+  const imageData = canvas.toDataURL('image/jpeg', 0.8);
+  
+  // 2. GASのURLへ送信
+  const GAS_URL = "ここにあなたのGASウェブアプリURLを貼り付け";
+  
+  try {
+    const response = await fetch(GAS_URL, {
+      method: "POST",
+      mode: "no-cors", // CORS回避が必要な場合
+      body: JSON.stringify({
+        fileName: fileName,
+        image: imageData
+      })
+    });
+    alert("送信成功しました！GAS側で処理が開始されます。");
+  } catch (error) {
+    console.error("送信失敗:", error);
+    alert("送信に失敗しました。");
+  }
+}
   </script>
 </body>
 </html>
