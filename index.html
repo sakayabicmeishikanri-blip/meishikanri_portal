@@ -8,17 +8,17 @@
     #snap { width: 80%; padding: 20px; margin: 20px; font-size: 18px; background: #007bff; color: white; }
     #outputCanvas { width: 90%; margin-top: 20px; border: 3px solid red; background: #333; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
 </head>
 <body>
   <video id="video" playsinline autoplay></video>
-  <button id="snap">映像をCanvasに転送テスト</button>
+  <button id="snap">OpenCV動作チェック</button>
   <canvas id="outputCanvas"></canvas>
 
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('outputCanvas');
 
-    // カメラ起動
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -31,20 +31,40 @@
       }
     }
     startCamera();
-    
 
-    // テスト：映像をそのままコピー
+    // OpenCVのロード完了を待ってからボタンを有効にする
+    // OpenCVの準備ができるまでボタンを無効にする処理
+    const btn = document.getElementById('snap');
+    btn.disabled = true;
+    btn.innerText = "OpenCV読み込み中...";
+
+    function onOpenCvReady() {
+      btn.disabled = false;
+      btn.innerText = "OpenCV動作チェック";
+      console.log("OpenCV Ready!");
+    }
+
+    // OpenCV.jsのロード完了イベント（念のため）
+    if (typeof cv !== 'undefined') {
+      onOpenCvReady();
+    } else {
+      window.onload = () => {
+        if (typeof cv !== 'undefined') onOpenCvReady();
+      };
+    }
+
     document.getElementById('snap').addEventListener('click', () => {
-      // 1. サイズ合わせ
+      // 1. 映像転送
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
       
-      // 2. 描画
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      console.log("転送テスト実行: " + canvas.width + "x" + canvas.height);
-      alert("転送完了！サイズ: " + canvas.width + "x" + canvas.height);
+      // 2. OpenCVの生存確認
+      if (typeof cv !== 'undefined') {
+        alert("OpenCVは正常です！バージョン: " + cv.getBuildInformation().split('\n')[0]);
+      } else {
+        alert("OpenCVが読み込まれていません！");
+      }
     });
   </script>
 </body>
