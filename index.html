@@ -23,7 +23,7 @@
     <video id="video" playsinline autoplay></video>
   </div>
   <button onclick="alert('ボタン自体は生きているよ')">テストボタン</button>
-  <button id="snap" disabled onclick="takeSnapshot()">カメラ準備中...</button>
+  <button id="snap" disabled>カメラ準備中...</button>
   <canvas id="outputCanvas"></canvas>
 
   <script>
@@ -42,13 +42,21 @@
           const btn = document.getElementById('snap');
           btn.disabled = false;
           btn.innerText = "撮影して輪郭を検出";
-        }, 2000);
+        }, 1000);
 
       } catch (err) {
         alert("カメラ起動失敗: " + err.message);
       }
     }
     startCamera();
+    // startCamera(); の直後に以下を追加
+window.addEventListener('load', () => {
+  const btn = document.getElementById('snap');
+  btn.addEventListener('click', function(e) {
+    e.preventDefault(); // デフォルトの動作を抑制
+    takeSnapshot();
+  });
+});
 
     // 撮影処理
     function takeSnapshot() {
