@@ -13,7 +13,14 @@
 <body>
   
   <video id="video" playsinline autoplay></video>
-  <button id="snap">グレースケール変換テスト</button>
+  <div id="controls">
+  <button id="snapBtn">撮影</button>
+  
+  <div id="actionBtns" style="display:none;">
+    <button id="sendBtn" style="background: green;">送信</button>
+    <button id="retryBtn" style="background: red;">取り直し</button>
+  </div>
+</div>
   <canvas id="outputCanvas"></canvas>
 
   <script>
@@ -29,8 +36,15 @@
       } catch (err) { alert("カメラ起動失敗: " + err); }
     }
     startCamera();
+    
+  const snapBtn = document.getElementById('snapBtn');
+const actionBtns = document.getElementById('actionBtns');
+const sendBtn = document.getElementById('sendBtn');
+const retryBtn = document.getElementById('retryBtn');
 
-    document.getElementById('snap').addEventListener('click', () => {
+    
+  // 撮影ボタンの処理
+snapBtn.addEventListener('click', () => {
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = video.videoWidth;
   tempCanvas.height = video.videoHeight;
@@ -76,7 +90,7 @@ function warpPerspective(src, contours) {
   cv.approxPolyDP(maxContour, approx, 0.02 * perimeter, true);
 
   if (approx.rows !== 4) {
-    alert("名刺の4隅を検出できませんでした。");
+    alert("認識できませんでした。再度撮影してください。");
     approx.delete();
     return;
   }
@@ -110,14 +124,38 @@ function warpPerspective(src, contours) {
   cv.imshow('outputCanvas', dst);
 
   srcTri.delete(); dstTri.delete(); M.delete(); dst.delete(); approx.delete();
-}
+
+  // 処理後、ボタンを切り替え
+    snapBtn.style.display = 'none';
+    actionBtns.style.display = 'block';
+});
+
+// 取り直しボタンの処理
+retryBtn.addEventListener('click', () => {
+    // 画面を元に戻す
+    actionBtns.style.display = 'none';
+    snapBtn.style.display = 'block';
+    
+    // 必要であればCanvasをクリアする処理
+    const context = document.getElementById('outputCanvas').getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+});
+
+// 送信ボタンは前回のコード通りでOK
+sendBtn.addEventListener('click', async () => {
+    await sendToGAS(document.getElementById('outputCanvas'), "card_" + Date.now() + ".jpg");
+    // 送信後、取り直しと同じ状態に戻す
+    retryBtn.click();
+});    
+
+    
 
     async function sendToGAS(canvas, fileName) {
   // 1. CanvasからBase64データを取得
   const imageData = canvas.toDataURL('image/jpeg', 0.8);
   
   // 2. GASのURLへ送信
-  const GAS_URL = "https://script.google.com/u/0/home/projects/1on8wQFnFgNN6ck3jXjBUGbV5oOlsGv3NJQgZ8DctkqRHc6JiYp1nqDj1/edit";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec";
   
   try {
     const response = await fetch(GAS_URL, {
