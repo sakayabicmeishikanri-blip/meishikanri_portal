@@ -35,7 +35,7 @@
   <script>
     const video = document.getElementById('video');
 
-    // カメラ起動
+        // カメラ起動処理を少し変更
     async function startCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -43,8 +43,17 @@
         });
         video.srcObject = stream;
         video.play();
+
+        // ★変更点：イベントを待つのではなく、一定時間待ってから強制的にボタンを出す
+        setTimeout(() => {
+          const btn = document.getElementById('snap');
+          btn.disabled = false;
+          btn.innerText = "撮影して輪郭を検出";
+          console.log("強制的にボタンを有効化しました");
+        }, 2000); // 2秒後に確実にボタンを出す
+
       } catch (err) {
-        alert("カメラ起動失敗: " + err);
+        alert("カメラ起動失敗: " + err.message);
       }
     }
     startCamera();
