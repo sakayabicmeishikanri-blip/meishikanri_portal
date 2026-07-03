@@ -127,10 +127,12 @@
       const imageData = canvas.toDataURL('image/jpeg', 0.8);
       const GAS_URL = "https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec";
       try {
-        const response = await fetch(GAS_URL, {
-          method: "POST", mode: "no-cors",
-          body: JSON.stringify({ fileName: fileName, image: imageData })
-        });
+    // mode: 'cors' に変更し、レスポンスを確認する
+    const response = await fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ fileName: fileName, image: imageData })
+    });
+        const result = await response.json();
         alert("送信成功しました！");
       } catch (error) { alert("送信失敗: " + error); }
     }
