@@ -1,22 +1,29 @@
-name: Send Image to GAS
-
+name: Upload to GAS
 on:
   push:
-    paths:
-      - 'images/**'  # imagesフォルダに画像を追加してプッシュした時だけ動く
+    branches: [ "main" ]
 
 jobs:
   upload:
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write' # 必須：OIDCトークン発行に必要
+
     steps:
       - uses: actions/checkout@v3
 
-      - name: Send to GAS
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v1'
+        with:
+          # ここにさっき作ったWorkload IdentityのIDを入力
+          workload_identity_provider: 'projects/308432369710/locations/global/workloadIdentityPools/github-actions-bot/providers/github'
+          service_account: 'github-actions-bot@github-actions-bot.iam.gserviceaccount.com'
+
+      - name: 'Send to GAS'
         run: |
-          # 画像をBase64に変換して変数に格納
-          BASE64_IMAGE=$(base64 -w 0 images/card.jpg)
-          
-          # GASへPOST送信
-          curl -L -X POST "https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec?mode=github" \
+          # 認証済み環境なので、これでGASにアクセスできる！
+          curl -L -X POST "https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec" \
             -H "Content-Type: application/json" \
-            --data "{\"fileName\": \"card.jpg\", \"image\": \"data:image/jpeg;base64,$BASE64_IMAGE\"}"
+            -d '{"fileName": "card.jpg", "image": "..."}'
