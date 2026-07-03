@@ -111,6 +111,16 @@ function warpPerspective(src, contours) {
     for (let i = 0; i < 4; i++) {
         points.push({ x: approx.data32S[i * 2], y: approx.data32S[i * 2 + 1] });
     }
+    
+    // 重心の計算
+    let centerX = points.reduce((sum, p) => sum + p.x, 0) / 4;
+    let centerY = points.reduce((sum, p) => sum + p.y, 0) / 4;
+    
+    // 中心からの角度で左上(0), 右上(1), 右下(2), 左下(3)に分類
+    points.sort((a, b) => {
+        return Math.atan2(a.y - centerY, a.x - centerX) - Math.atan2(b.y - centerY, b.x - centerX);
+    });
+    }
   console.log("検出された4隅の座標:", sortedPoints);
     // 座標並べ替えロジック
     points.sort((a, b) => a.y - b.y);
