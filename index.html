@@ -18,105 +18,59 @@
     position: relative; /* 追加 */
     z-index: 100;       /* 追加：確実に手前に表示 */
 }
+    #snap:disabled { background: #555; }
     #guide-frame { position: absolute; top: 20%; left: 10%; width: 80%; height: 20%; border: 2px solid yellow; box-sizing: border-box; pointer-events: none; }
     #outputCanvas { width: 90%; margin-top: 10px; border: 2px solid green; }
   </style>
 </head>
 <body>
-  <h1>名刺読み取り</h1>
-  <div id="camera-container" style="position: relative; width: 100%;">
+  <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
+<div id="camera-container" style="position: relative; width: 100%;">
     <video id="video" playsinline autoplay></video>
   </div>
+  
   <button id="snap" disabled>カメラ準備中...</button>
   <canvas id="outputCanvas"></canvas>
-<script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
+
   <script>
-    let src, dst;
+    const video = document.getElementById('video');
 
-    function onOpenCvReady() {
-      console.log("OpenCV.js is ready!");
-      startCamera();
-    }
-
+    // カメラ起動
     async function startCamera() {
       try {
-        const video = document.getElementById('video');
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: "environment" } }
         });
         video.srcObject = stream;
-        
-        // 映像の準備ができたらボタンを有効にする
-        video.onloadedmetadata = () => {
-          video.play();
-          const btn = document.getElementById('snap');
-          btn.disabled = false;
-          btn.innerText = "撮影して輪郭を検出";
-        };
+        video.play();
       } catch (err) {
-        alert("カメラ起動失敗: " + err.message);
+        alert("カメラ起動失敗: " + err);
       }
     }
-
-    // OpenCVの読み込み
-    let script = document.createElement('script');
-    script.src = "https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js";
-    script.onload = onOpenCvReady;
-    document.body.appendChild(script);
+    startCamera();
 
     // 撮影処理
-    document.getElementById('snap').addEventListener('click', () => {
-      alert("撮影処理を開始します"); // これが表示されるか確認
-      const video = document.getElementById('video');
+    function takeSnapshot() {
+      // 念のためopencvがロードされているか確認
+      if (typeof cv === 'undefined') {
+        alert("OpenCVがまだ読み込まれていません！");
+        return;
+      }
+
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
 
-      // グローバル変数の解放
-      if (src) src.delete();
-      if (dst) dst.delete();
-
-      // ここで再定義(let)せず、代入(=)のみにする
-      src = cv.imread(canvas);
-      dst = new cv.Mat();
-      let gray = new cv.Mat();
-      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-      let blurred = new cv.Mat();
-      cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-      let edged = new cv.Mat();
-      cv.Canny(blurred, edged, 75, 200);
-
-      let contours = new cv.MatVector();
-      let hierarchy = new cv.Mat();
-      cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-      let maxArea = 0;
-      let maxContour = null;
-      for (let i = 0; i < contours.size(); ++i) {
-        let cnt = contours.get(i);
-        let area = cv.contourArea(cnt);
-        if (area > maxArea) { maxArea = area; maxContour = cnt; }
-      }
-
-      if (maxContour) {
-        let peri = cv.arcLength(maxContour, true);
-        let approx = new cv.Mat();
-        cv.approxPolyDP(maxContour, approx, 0.02 * peri, true);
-        if (approx.rows === 4) {
-          let srcTri = cv.matFromArray(4, 1, cv.CV_32SC2, approx.data32S);
-          let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, 350, 0, 350, 200, 0, 200]);
-          let M = cv.getPerspectiveTransform(srcTri, dstTri);
-          cv.warpPerspective(src, dst, M, new cv.Size(350, 200));
-          cv.imshow('outputCanvas', dst);
-          srcTri.delete(); dstTri.delete(); M.delete();
-        }
-        approx.delete();
-      }
-
-      gray.delete(); blurred.delete(); edged.delete(); contours.delete(); hierarchy.delete();
-    });
+      // OpenCV処理
+      let src = cv.imread(canvas);
+      let dst = new cv.Mat();
+      cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+      cv.imshow('outputCanvas', dst);
+      
+      src.delete(); 
+      dst.delete();
+    }
   </script>
 </body>
 </html>
