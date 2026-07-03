@@ -15,24 +15,13 @@
   <h1>名刺読み取り</h1>
   <div id="camera-container" style="position: relative; width: 100%;">
     <video id="video" playsinline autoplay></video>
-    <div id="guide-frame"></div>
   </div>
-  <button id="snap">撮影して輪郭を検出</button>
-  <div>検出結果:</div>
+  <button id="snap" disabled>カメラ準備中...</button>
   <canvas id="outputCanvas"></canvas>
 
   <script>
-// 画面上にエラーを表示するデバッグ用関数
-  function debugLog(msg) {
-    let div = document.createElement('div');
-    div.style.color = 'red';
-    div.style.fontSize = '12px';
-    div.innerText = msg;
-    document.body.appendChild(div);
-  }
-  window.onerror = (msg) => debugLog("ERROR: " + msg);
-    
-    // 1. 関数を先に定義
+    let src, dst;
+
     function onOpenCvReady() {
       console.log("OpenCV.js is ready!");
       startCamera();
@@ -40,82 +29,82 @@
 
     async function startCamera() {
       try {
+        const video = document.getElementById('video');
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: "environment" } }
         });
-        document.getElementById('video').srcObject = stream;
+        video.srcObject = stream;
+        
+        // 映像の準備ができたらボタンを有効にする
+        video.onloadedmetadata = () => {
+          video.play();
+          const btn = document.getElementById('snap');
+          btn.disabled = false;
+          btn.innerText = "撮影して輪郭を検出";
+        };
       } catch (err) {
         alert("カメラ起動失敗: " + err.message);
       }
     }
 
-    // 2. 動的にOpenCVを読み込む（エラー回避のため）
+    // OpenCVの読み込み
     let script = document.createElement('script');
     script.src = "https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js";
     script.onload = onOpenCvReady;
     document.body.appendChild(script);
 
-    // 3. 撮影ボタンの処理
-    let src, dst;
-document.getElementById('snap').addEventListener('click', () => {
-    const video = document.getElementById('video');
+    // 撮影処理
+    document.getElementById('snap').addEventListener('click', () => {
+      const video = document.getElementById('video');
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
 
-  // ガード：映像サイズが正常か確認
-    if (video.videoWidth === 0 || video.videoHeight === 0) {
-        alert("カメラ映像の準備ができていません。映像が表示されてから押してください。");
-        return; 
-    }
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+      // グローバル変数の解放
+      if (src) src.delete();
+      if (dst) dst.delete();
 
-    let src = cv.imread(canvas);
-    let dst = new cv.Mat();
-    let gray = new cv.Mat();
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+      // ここで再定義(let)せず、代入(=)のみにする
+      src = cv.imread(canvas);
+      dst = new cv.Mat();
+      let gray = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-    let blurred = new cv.Mat();
-    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-    let edged = new cv.Mat();
-    cv.Canny(blurred, edged, 75, 200);
+      let blurred = new cv.Mat();
+      cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+      let edged = new cv.Mat();
+      cv.Canny(blurred, edged, 75, 200);
 
-    let contours = new cv.MatVector();
-    let hierarchy = new cv.Mat();
-    cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      let contours = new cv.MatVector();
+      let hierarchy = new cv.Mat();
+      cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-    // 最大の輪郭（名刺）を探す
-    let maxArea = 0;
-    let maxContour = null;
-    for (let i = 0; i < contours.size(); ++i) {
+      let maxArea = 0;
+      let maxContour = null;
+      for (let i = 0; i < contours.size(); ++i) {
         let cnt = contours.get(i);
         let area = cv.contourArea(cnt);
-        if (area > maxArea) {
-            maxArea = area;
-            maxContour = cnt;
-        }
-    }
+        if (area > maxArea) { maxArea = area; maxContour = cnt; }
+      }
 
-    if (maxContour) {
-        // 輪郭を4点に近似
+      if (maxContour) {
         let peri = cv.arcLength(maxContour, true);
         let approx = new cv.Mat();
         cv.approxPolyDP(maxContour, approx, 0.02 * peri, true);
-
         if (approx.rows === 4) {
-            // 透視変換（台形補正）
-            let srcTri = cv.matFromArray(4, 1, cv.CV_32SC2, approx.data32S);
-            let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, 350, 0, 350, 200, 0, 200]); // 名刺サイズ比率
-            let M = cv.getPerspectiveTransform(srcTri, dstTri);
-            cv.warpPerspective(src, dst, M, new cv.Size(350, 200));
-            cv.imshow('outputCanvas', dst);
-            srcTri.delete(); dstTri.delete(); M.delete();
+          let srcTri = cv.matFromArray(4, 1, cv.CV_32SC2, approx.data32S);
+          let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, 350, 0, 350, 200, 0, 200]);
+          let M = cv.getPerspectiveTransform(srcTri, dstTri);
+          cv.warpPerspective(src, dst, M, new cv.Size(350, 200));
+          cv.imshow('outputCanvas', dst);
+          srcTri.delete(); dstTri.delete(); M.delete();
         }
         approx.delete();
-    }
+      }
 
-    src.delete(); gray.delete(); blurred.delete(); edged.delete(); contours.delete(); hierarchy.delete(); dst.delete();
-});
+      gray.delete(); blurred.delete(); edged.delete(); contours.delete(); hierarchy.delete();
+    });
   </script>
 </body>
 </html>
