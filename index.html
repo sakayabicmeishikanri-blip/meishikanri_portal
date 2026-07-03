@@ -86,6 +86,9 @@ function warpPerspective(src, contours) {
   /**
  * 輪郭から4点を見つけて台形補正する関数
  */
+/**
+ * 輪郭から4点を見つけて台形補正する関数
+ */
 function warpPerspective(src, contours) {
     // 1. 最大の輪郭（名刺）を見つける
     let maxArea = 0;
@@ -102,34 +105,28 @@ function warpPerspective(src, contours) {
 
     // 頂点が4つでない場合は補正不可
     if (approx.rows !== 4) {
-        alert("名刺の4隅が検出できませんでした。もっと近くで撮影してください。");
+        alert("名刺の4隅が検出できませんでした。");
         approx.delete();
         return;
     }
 
-    // 3. 座標を抽出して並べ替え（左上, 右上, 右下, 左下）
+    // 3. 座標を抽出
     let points = [];
     for (let i = 0; i < 4; i++) {
         points.push({ x: approx.data32S[i * 2], y: approx.data32S[i * 2 + 1] });
     }
-    
-    // 重心の計算
-    let centerX = points.reduce((sum, p) => sum + p.x, 0) / 4;
-    let centerY = points.reduce((sum, p) => sum + p.y, 0) / 4;
-    
-    // 中心からの角度で左上(0), 右上(1), 右下(2), 左下(3)に分類
-    points.sort((a, b) => {
-        return Math.atan2(a.y - centerY, a.x - centerX) - Math.atan2(b.y - centerY, b.x - centerX);
-    });
-    }
-  console.log("検出された4隅の座標:", sortedPoints);
-    // 座標並べ替えロジック
+
+    // 座標並べ替え（y座標でソートし、上側2つと下側2つを分ける）
     points.sort((a, b) => a.y - b.y);
     let top = points.slice(0, 2).sort((a, b) => a.x - b.x);
     let bottom = points.slice(2, 4).sort((a, b) => a.x - b.x);
     let sortedPoints = [top[0], top[1], bottom[1], bottom[0]]; // 左上, 右上, 右下, 左下
 
-    // 4. 変換行列の作成（名刺サイズを 400x250 に正規化）
+    // ★スマホ確認用：座標をアラートで表示
+    alert("左上:" + sortedPoints[0].x + "," + sortedPoints[0].y + 
+          " 右上:" + sortedPoints[1].x + "," + sortedPoints[1].y);
+
+    // 4. 変換行列の作成
     let dstWidth = 400;
     let dstHeight = 250;
     let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
@@ -151,7 +148,6 @@ function warpPerspective(src, contours) {
 
     // メモリ解放
     srcTri.delete(); dstTri.delete(); M.delete(); dst.delete(); approx.delete();
-}
 }
   </script>
 </body>
