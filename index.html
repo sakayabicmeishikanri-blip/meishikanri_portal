@@ -10,14 +10,20 @@
         body { margin: 0; display: flex; flex-direction: column; align-items: center; background: #000; }
         #video { width: 100%; height: 70vh; object-fit: cover; }
         #snap { width: 80%; padding: 20px; margin-top: 20px; font-size: 18px; background: #007bff; color: white; border: none; border-radius: 10px; }
+    .guide-frame {position: absolute; top: 20%; left: 10%; width: 80%; height: 20%; border: 2px solid yellow; box-sizing: border-box;}
+    
     </style>
         
 </head>
 <body>
     <h1>名刺読み取り</h1>
-<video id="video" playsinline autoplay></video>
+<div id="camera-container" style="position: relative;">
+    <video id="video" playsinline autoplay></video>
+    <div id="guide-frame" ></div>
+</div>
 <button id="snap">撮影して送信</button>
 <canvas id="canvas" style="display:none;"></canvas>
+    
     
 <script>
         const video = document.getElementById('video');
@@ -37,29 +43,60 @@
             const btn = document.getElementById('snap');
             btn.disabled = true; // 連打防止
             btn.innerText = "送信中...";
+          
 
-            // キャンバスサイズを動画に合わせる
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+document.getElementById('snap').addEventListener('click', async () => {
+    const btn = document.getElementById('snap');
+    btn.disabled = true; // 連打防止
+    btn.innerText = "送信中...";
 
-            // 送信用のデータ生成
-            const imageData = canvas.toDataURL('image/jpeg', 0.7); // 画質調整(0.7で少し軽量化)
-            
-            try {
-                const response = await fetch('あなたのGASのWebアプリURL', {
-                    method: 'POST',
-                    mode: 'no-cors', // iOSでのブロック回避のため
-                    body: JSON.stringify({ image: imageData, fileName: "card_" + Date.now() + ".jpg" })
-                });
-                alert('送信完了！');
-            } catch (e) {
-                alert('送信エラー: ' + e);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "撮影して送信";
-            }
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const guide = document.getElementById('guide-frame'); // HTMLで作ったガイド枠
+
+    // ★修正ポイント: 動画要素とガイド枠の相対的な位置関係を取得
+    const videoRect = video.getBoundingClientRect();
+    const guideRect = guide.getBoundingClientRect();
+
+    // ビデオ要素内でのガイド枠の相対位置を計算
+    const scaleX = video.videoWidth / videoRect.width;
+    const scaleY = video.videoHeight / videoRect.height;
+
+    const cropX = (guideRect.left - videoRect.left) * scaleX;
+    const cropY = (guideRect.top - videoRect.top) * scaleY;
+    const cropW = guideRect.width * scaleX;
+    const cropH = guideRect.height * scaleY;
+
+    // Canvasサイズをトリミング後のサイズに設定
+    canvas.width = cropW;
+    canvas.height = cropH;
+    
+    // ★重要: ガイド部分だけをCanvasに描画
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+    // 送信用のデータ生成 (Base64)
+    const imageData = canvas.toDataURL('image/jpeg', 0.8);
+    
+    // あとはこの imageData を GAS に送信 (fetch処理は前のままでOK)
+    try {
+        await fetch('あなたのGASのWebアプリURL', {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ 
+                image: imageData, 
+                fileName: "card_" + Date.now() + ".jpg" 
+            })
         });
+        alert('送信しました！');
+    } catch (e) {
+        console.error(e);
+        alert('送信エラー');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "撮影して送信";
+    }
+});
     </script>
 </body>
 </html>
