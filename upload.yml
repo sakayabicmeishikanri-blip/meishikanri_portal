@@ -1,16 +1,22 @@
-name: Upload Image to Form
+name: Send Image to GAS
+
 on:
   push:
     paths:
-      - 'images/**' # imagesフォルダに画像が入ったら実行
+      - 'images/**'  # imagesフォルダに画像を追加してプッシュした時だけ動く
 
 jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Send to Google Form
+
+      - name: Send to GAS
         run: |
-          curl -L -X POST "https://docs.google.com/forms/u/0/d/e/1FAIpQLSdOZioLDFzmy7J2Fqo5Cj374Akb5MFnmn46gHXNx0nwbvDeMA/formResponse" \
-          -d "entry.158646122=${{ github.event.head_commit.message }}" \
-          -F "file=@images/card.jpg" # ファイルアップロードの場合
+          # 画像をBase64に変換して変数に格納
+          BASE64_IMAGE=$(base64 -w 0 images/card.jpg)
+          
+          # GASへPOST送信
+          curl -L -X POST "https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec?mode=github" \
+            -H "Content-Type: application/json" \
+            --data "{\"fileName\": \"card.jpg\", \"image\": \"data:image/jpeg;base64,$BASE64_IMAGE\"}"
