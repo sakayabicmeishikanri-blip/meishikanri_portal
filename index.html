@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>酒ゃビック名刺管理システム</title>
+</head>
+<body>
+    <h1>名刺読み取り</h1>
+    <video id="video" width="100%" autoplay></video>
+    <button id="snap">撮影して保存</button>
+    <canvas id="canvas" style="display:none;"></canvas>
+    
+    <script>
+        // カメラの起動
+        const video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => { video.srcObject = stream; });
+
+        // 撮影とドライブへの送信（ここはGoogleドライブのAPI/GASのURLへ飛ばす）
+        document.getElementById('snap').addEventListener('click', () => {
+            // ここでcanvasに描画し、データを取得してGASのWebアプリURLへ送信
+        });
+    </script>
+</body>
+</html>
