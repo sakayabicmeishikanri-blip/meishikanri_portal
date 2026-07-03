@@ -16,12 +16,13 @@
   </style>
 </head>
 <body>
+  
   <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
   
   <div id="camera-container" style="position: relative; width: 100%;">
     <video id="video" playsinline autoplay></video>
   </div>
-  
+  <button onclick="alert('ボタン自体は生きているよ')">テストボタン</button>
   <button id="snap" disabled onclick="takeSnapshot()">カメラ準備中...</button>
   <canvas id="outputCanvas"></canvas>
 
