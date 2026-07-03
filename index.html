@@ -66,6 +66,7 @@
 
     // 撮影処理
     document.getElementById('snap').addEventListener('click', () => {
+      alert("撮影処理を開始します"); // これが表示されるか確認
       const video = document.getElementById('video');
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
