@@ -1,7 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
     <title>酒ゃビック名刺管理システム</title>
+
+    <style>
+        /* カメラを全画面表示にする */
+        body { margin: 0; display: flex; flex-direction: column; align-items: center; background: #000; }
+        #video { width: 100%; height: 70vh; object-fit: cover; }
+        #snap { width: 80%; padding: 20px; margin-top: 20px; font-size: 18px; background: #007bff; color: white; border: none; border-radius: 10px; }
+    </style>
+        
 </head>
 <body>
     <h1>名刺読み取り</h1>
@@ -10,44 +20,46 @@
 <canvas id="canvas" style="display:none;"></canvas>
     
 <script>
-  // 背面カメラの優先起動
-// 背面カメラを優先、ダメならフロントでも起動する設定
-async function startCamera() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: { ideal: "environment" } // "exact" ではなく "ideal" に変更
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: "environment" } }
+                });
+                video.srcObject = stream;
+            } catch (err) { alert("カメラ起動失敗: " + err); }
+        }
+        startCamera();
+
+        document.getElementById('snap').addEventListener('click', async () => {
+            const btn = document.getElementById('snap');
+            btn.disabled = true; // 連打防止
+            btn.innerText = "送信中...";
+
+            // キャンバスサイズを動画に合わせる
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+
+            // 送信用のデータ生成
+            const imageData = canvas.toDataURL('image/jpeg', 0.7); // 画質調整(0.7で少し軽量化)
+            
+            try {
+                const response = await fetch('あなたのGASのWebアプリURL', {
+                    method: 'POST',
+                    mode: 'no-cors', // iOSでのブロック回避のため
+                    body: JSON.stringify({ image: imageData, fileName: "card_" + Date.now() + ".jpg" })
+                });
+                alert('送信完了！');
+            } catch (e) {
+                alert('送信エラー: ' + e);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "撮影して送信";
             }
         });
-        document.getElementById('video').srcObject = stream;
-    } catch (err) {
-        console.error("カメラ起動エラー: ", err);
-        alert("カメラへのアクセスが拒否されました。設定を確認してください。");
-    }
-}
-
-
-  startCamera();
-
-  // 撮影・送信処理
-  document.getElementById('snap').addEventListener('click', async () => {
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-
-    // Base64形式に変換
-    const imageData = canvas.toDataURL('image/jpeg', 0.8);
-    
-    // GASのWebアプリURLへ送信（後述の手順で取得します）
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec';
-    await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({ image: imageData, fileName: "card_" + Date.now() + ".jpg" })
-    });
-    alert('送信しました！');
-  });
-</script>
+    </script>
 </body>
 </html>
