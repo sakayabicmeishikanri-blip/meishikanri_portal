@@ -83,6 +83,64 @@ function warpPerspective(src, contours) {
     //   名刺の4隅を「正しい長方形」に写像する計算を行います。
     
     // ... このあとに warpPerspective 処理が続きます ...
+  /**
+ * 輪郭から4点を見つけて台形補正する関数
+ */
+function warpPerspective(src, contours) {
+    // 1. 最大の輪郭（名刺）を見つける
+    let maxArea = 0;
+    let maxContour = null;
+    for (let i = 0; i < contours.size(); ++i) {
+        let area = cv.contourArea(contours.get(i));
+        if (area > maxArea) { maxArea = area; maxContour = contours.get(i); }
+    }
+
+    // 2. 輪郭を4角形に近似する
+    let perimeter = cv.arcLength(maxContour, true);
+    let approx = new cv.Mat();
+    cv.approxPolyDP(maxContour, approx, 0.02 * perimeter, true);
+
+    // 頂点が4つでない場合は補正不可
+    if (approx.rows !== 4) {
+        alert("名刺の4隅が検出できませんでした。もっと近くで撮影してください。");
+        approx.delete();
+        return;
+    }
+
+    // 3. 座標を抽出して並べ替え（左上, 右上, 右下, 左下）
+    let points = [];
+    for (let i = 0; i < 4; i++) {
+        points.push({ x: approx.data32S[i * 2], y: approx.data32S[i * 2 + 1] });
+    }
+    // 座標並べ替えロジック
+    points.sort((a, b) => a.y - b.y);
+    let top = points.slice(0, 2).sort((a, b) => a.x - b.x);
+    let bottom = points.slice(2, 4).sort((a, b) => a.x - b.x);
+    let sortedPoints = [top[0], top[1], bottom[1], bottom[0]]; // 左上, 右上, 右下, 左下
+
+    // 4. 変換行列の作成（名刺サイズを 400x250 に正規化）
+    let dstWidth = 400;
+    let dstHeight = 250;
+    let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        sortedPoints[0].x, sortedPoints[0].y,
+        sortedPoints[1].x, sortedPoints[1].y,
+        sortedPoints[2].x, sortedPoints[2].y,
+        sortedPoints[3].x, sortedPoints[3].y
+    ]);
+    let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight
+    ]);
+
+    let M = cv.getPerspectiveTransform(srcTri, dstTri);
+    let dst = new cv.Mat();
+    cv.warpPerspective(src, dst, M, new cv.Size(dstWidth, dstHeight));
+
+    // 5. 結果表示
+    cv.imshow('outputCanvas', dst);
+
+    // メモリ解放
+    srcTri.delete(); dstTri.delete(); M.delete(); dst.delete(); approx.delete();
+}
 }
   </script>
 </body>
