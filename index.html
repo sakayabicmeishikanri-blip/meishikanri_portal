@@ -44,16 +44,28 @@
     // CanvasからOpenCVのMatへ変換
     let src = cv.imread(canvas);
     
-    // ここで画像処理（グレースケール化やトリミング）を実行
-    let dst = new cv.Mat();
-    cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY); // 例：グレースケール化
+    // 【重要】撮影ボタン内の画像処理部分を以下のように書き換えます
+let src = cv.imread(canvas);
+let gray = new cv.Mat();
+cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);// 例：グレースケール化
+
+// 1. ノイズ除去と輪郭検出
+let blurred = new cv.Mat();
+cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+let edged = new cv.Mat();
+cv.Canny(blurred, edged, 75, 200);
+
+// 2. 輪郭を探す
+let contours = new cv.MatVector();
+let hierarchy = new cv.Mat();
+cv.findContours(edged, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);        
     
     // 結果をCanvasに表示（または送信処理へ）
     cv.imshow('outputCanvas', dst);
     
-    // 後始末（メモリリークを防ぐために重要）
-    src.delete(); 
-    dst.delete();
+    // 4. メモリ解放（必須！）
+src.delete(); gray.delete(); blurred.delete(); edged.delete(); contours.delete(); hierarchy.delete();
+        
 });
 </script>
 </body>
