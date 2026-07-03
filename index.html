@@ -51,11 +51,30 @@
 
     // 撮影処理
     function takeSnapshot() {
-      // 念のためopencvがロードされているか確認
-      if (typeof cv === 'undefined') {
-        alert("OpenCVがまだ読み込まれていません！");
-        return;
-      }
+      // 1. 撮影用の一時Canvasを作成
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0);
+
+      // 2. OpenCVで処理
+      let src = cv.imread(canvas);
+      let dst = new cv.Mat();
+      cv.cvtColor(src, dst, cv.COLOR_RGBA2GRAY);
+
+      // 3. ★imshowを使わず、手動で描画する（これが一番確実）
+      const outputCanvas = document.getElementById('outputCanvas');
+      outputCanvas.width = dst.cols;
+      outputCanvas.height = dst.rows;
+      
+      // MatをImageDataに変換して表示
+      const imgData = new ImageData(new Uint8ClampedArray(dst.data, dst.cols, dst.rows), dst.cols, dst.rows);
+      outputCanvas.getContext('2d').putImageData(imgData, 0, 0);
+      
+      src.delete(); 
+      dst.delete();
+    }
 
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
