@@ -1,86 +1,70 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-    <title>酒ゃビック名刺管理システム</title>
-
-    <style>
-        /* カメラを全画面表示にする */
-        body { margin: 0; display: flex; flex-direction: column; align-items: center; background: #000; }
-        #video { width: 100%; height: 70vh; object-fit: cover; }
-        #snap { width: 80%; padding: 20px; margin-top: 20px; font-size: 18px; background: #007bff; color: white; border: none; border-radius: 10px; }
-    .guide-frame {position: absolute; top: 20%; left: 10%; width: 80%; height: 20%; border: 2px solid yellow; box-sizing: border-box;}
-    
-    </style>
-
-  
-        
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>酒ゃビック名刺管理システム</title>
+  <style>
+    body { margin: 0; display: flex; flex-direction: column; align-items: center; background: #000; color: white; }
+    #video { width: 100%; height: 50vh; object-fit: cover; }
+    #snap { width: 80%; padding: 20px; margin: 20px; font-size: 18px; background: #007bff; color: white; border: none; border-radius: 10px; }
+    #guide-frame { position: absolute; top: 20%; left: 10%; width: 80%; height: 20%; border: 2px solid yellow; box-sizing: border-box; pointer-events: none; }
+    #outputCanvas { width: 90%; margin-top: 10px; border: 2px solid green; }
+  </style>
 </head>
 <body>
-    <h1>名刺読み取り</h1>
-<div id="camera-container" style="position: relative;">
+  <h1>名刺読み取り</h1>
+  <div id="camera-container" style="position: relative; width: 100%;">
     <video id="video" playsinline autoplay></video>
-    <div id="guide-frame" ></div>
-</div>
-<button id="snap">撮影して送信</button>
-<canvas id="outputCanvas" style="display:none;"></canvas>
-    
+    <div id="guide-frame"></div>
+  </div>
+  <button id="snap">撮影して輪郭を検出</button>
+  <div>検出結果:</div>
+  <canvas id="outputCanvas"></canvas>
 
-<script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js" onload="onOpenCvReady();"></script>
+  <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js" onload="onOpenCvReady();"></script>
+  <script>
+    let src, dst;
 
-<script>
-  let src, dst; // グローバル変数
-
-  function onOpenCvReady() {
-    console.log("OpenCV.js is ready!");
-    startCamera();
-  }
-
-  async function startCamera() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } }
-      });
-      const video = document.getElementById('video');
-      video.srcObject = stream;
-      video.play();
-    } catch (err) {
-      alert("カメラ起動失敗: " + err.message);
+    function onOpenCvReady() {
+      console.log("OpenCV.js is ready!");
+      startCamera();
     }
-  }
 
-  document.getElementById('snap').addEventListener('click', () => {
-    const video = document.getElementById('video');
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } }
+        });
+        document.getElementById('video').srcObject = stream;
+      } catch (err) {
+        alert("カメラ起動失敗: " + err.message);
+      }
+    }
 
-    // メモリ解放
-    if (src) src.delete();
-    if (dst) dst.delete();
+    document.getElementById('snap').addEventListener('click', () => {
+      const video = document.getElementById('video');
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
 
-    // 読み込みと画像処理
-    src = cv.imread(canvas);
-    dst = new cv.Mat();
-    let gray = new cv.Mat();
-    
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-    
-    // 輪郭検出のパイプライン
-    let blurred = new cv.Mat();
-    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-    let edged = new cv.Mat();
-    cv.Canny(blurred, edged, 75, 200);
+      if (src) src.delete();
+      if (dst) dst.delete();
 
-    // 結果を画面に表示 (dstに加工後の画像をセット)
-    cv.imshow('outputCanvas', edged); 
+      src = cv.imread(canvas);
+      dst = new cv.Mat();
+      let gray = new cv.Mat();
+      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-    // メモリ解放
-    gray.delete(); blurred.delete(); edged.delete();
-    // srcとdstは次の撮影のために保持またはここでdelete
-  });
-</script>
+      let blurred = new cv.Mat();
+      cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+      let edged = new cv.Mat();
+      cv.Canny(blurred, edged, 75, 200);
+
+      cv.imshow('outputCanvas', edged);
+
+      gray.delete(); blurred.delete(); edged.delete();
+    });
+  </script>
 </body>
 </html>
