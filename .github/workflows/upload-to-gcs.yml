@@ -1,14 +1,11 @@
 name: Upload to GCS
 on:
-  push:
-    branches: [ "main" ]
+  repository_dispatch:
+    types: [upload-image] # 「upload-image」というイベントを待ち受ける
 
 jobs:
-  upload:              # ここがジョブ名
-    runs-on: ubuntu-latest  # ★ここがインデントされて、uploadの直下にある必要があります
-    permissions:
-      contents: 'read'
-      id-token: 'write' 
+  upload:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       
