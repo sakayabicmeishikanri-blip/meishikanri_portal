@@ -20,6 +20,8 @@ jobs:
         with:
           workload_identity_provider: 'projects/308432369710/locations/global/workloadIdentityPools/github-pool/providers/github'
           service_account: 'githubmeishikanri@github-actions-bot.iam.gserviceaccount.com'
+          # これを必ず追加してください！
+          audience: 'google.github.actions'
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
