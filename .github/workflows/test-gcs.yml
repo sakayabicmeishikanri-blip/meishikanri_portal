@@ -11,13 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-
-      - id: 'auth'
+     - id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: 'projects/308432369710/locations/global/workloadIdentityPools/github-pool/providers/github'
           service_account: 'githubmeishikanri@github-actions-bot.iam.gserviceaccount.com'
-          # ここを追加！※Google Cloud側で設定したオーディエンス値と一致させること
+          # ここにこの記述が必ず必要です！
           audience: 'google.github.actions'
 
       - name: 'Verify Authentication'
