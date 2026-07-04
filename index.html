@@ -127,7 +127,7 @@ async function uploadDirectly(canvas) {
   const fileName = `card_${Date.now()}.jpg`;
 
   // 1. GASから「チケット（署名付きURL）」をもらう
-  const gasUrl = 'あなたのデプロイしたGASのURL';
+  const gasUrl = 'https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec';
   const response = await fetch(`${gasUrl}?fileName=${fileName}`);
   const uploadUrl = await response.text();
 
