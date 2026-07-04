@@ -1,7 +1,7 @@
 name: Upload to GCS
 on:
   repository_dispatch:
-    types: [upload-image] # 「upload-image」というイベントを待ち受ける
+    types: [upload_meishi] # Cloud Run側の 'upload_meishi' に合わせました
 
 jobs:
   upload:
@@ -20,6 +20,11 @@ jobs:
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
 
+      - name: 'Create image file from payload'
+        run: |
+          mkdir -p images
+          echo "${{ github.event.client_payload.base64Data }}" | base64 -d > ./images/${{ github.event.client_payload.fileName }}
+
       - name: 'Upload image to GCS'
         run: |
-          gcloud storage cp ./images/* gs://sakayabic-meishikanri-strage/
+          gcloud storage cp ./images/${{ github.event.client_payload.fileName }} gs://sakayabic-meishikanri-strage/
