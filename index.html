@@ -131,10 +131,10 @@ async function uploadDirectly(canvas) {
 
   try {
     const response = await fetch(cloudRunUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ base64Data: base64data, fileName: fileName })
-    });
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }, // これが必須です
+    body: JSON.stringify({ base64Data: base64data, fileName: fileName })
+  });
 
     if (response.ok) {
       alert('送信成功！');
