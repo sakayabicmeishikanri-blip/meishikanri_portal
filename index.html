@@ -123,25 +123,22 @@
     });
 
 async function uploadDirectly(canvas) {
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+  const base64data = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
   const fileName = `card_${Date.now()}.jpg`;
 
-  // 1. GASから「チケット（署名付きURL）」をもらう
-  const gasUrl = 'https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec';
-  const response = await fetch(`${gasUrl}?fileName=${fileName}`);
-  const uploadUrl = await response.text();
+  // Cloud RunのURLをここに貼り付け
+  const cloudRunUrl = 'https://meishikanrirun-308432369710.asia-northeast2.run.app';
 
-  // 2. そのチケットを使ってGCSへ直行PUT
-  const uploadResult = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'image/jpeg' },
-    body: blob
+  const response = await fetch(cloudRunUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base64Data: base64data, fileName: fileName })
   });
 
-  if (uploadResult.ok) {
-    alert('保存完了！GCSへ直行しました。');
+  if (response.ok) {
+    alert('保存完了！GitHub経由でGCSへ転送されます。');
   } else {
-    alert('保存失敗。');
+    alert('送信失敗。ログを確認してください。');
   }
 }
 
