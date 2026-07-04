@@ -1,0 +1,24 @@
+name: GCS Test
+on: [push]
+
+jobs:
+  test-auth:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # これが必須！
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: 'projects/プロジェクト番号/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'あなたのサービスアカウント名@プロジェクトID.iam.gserviceaccount.com'
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: 'Verify Authentication'
+        run: gcloud auth list # これで認証が通っているか表示される
