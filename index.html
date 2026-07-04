@@ -125,23 +125,27 @@
 async function uploadDirectly(canvas) {
   const base64data = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
   const fileName = `card_${Date.now()}.jpg`;
+  const cloudRunUrl = 'https://あなたのCloudRunのURL.a.run.app';
 
-  // Cloud RunのURLをここに貼り付け
-  const cloudRunUrl = 'https://meishikanrirun-308432369710.asia-northeast2.run.app';
+  alert('送信開始します'); // 1. ここで反応するか確認
 
-  const response = await fetch(cloudRunUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ base64Data: base64data, fileName: fileName })
-  });
+  try {
+    const response = await fetch(cloudRunUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base64Data: base64data, fileName: fileName })
+    });
 
-  if (response.ok) {
-    alert('保存完了！GitHub経由でGCSへ転送されます。');
-  } else {
-    alert('送信失敗。ログを確認してください。');
+    if (response.ok) {
+      alert('送信成功！');
+    } else {
+      const err = await response.text();
+      alert('サーバーエラー: ' + err); // 2. サーバーが何か返しているか確認
+    }
+  } catch (e) {
+    alert('通信失敗（ネットワークまたはCORS）: ' + e.message); // 3. ブラウザがブロックしたか確認
   }
 }
-
  
   </script>
 </body>
