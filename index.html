@@ -33,6 +33,12 @@
   border: 2px solid rgba(255, 255, 0, 0.8);
   pointer-events: none;
 }
+/* 通常時 */
+.guide-default { border: 2px solid rgba(255, 255, 0, 0.8); }
+
+/* 認識成功時 */
+.guide-detected { border: 4px solid #00ff00 !important; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.8); }
+    
     #controls {
       position: absolute;
       bottom: 50px;
@@ -100,21 +106,18 @@ async function startCamera() {
     }
   };
 
-  try {
+try {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = stream;
-    console.log("カメラが高画質設定で起動しました");
-  } catch (err) {
-    console.error("カメラの起動に失敗しました: ", err);
-    alert("カメラへのアクセスを許可してください");
-  }
+    
+    // ★ここに追加：ビデオが読み込まれたらループを開始
+    video.onloadedmetadata = () => {
+      detectLoop();
+    };
+  } catch (err) { alert("カメラアクセスが必要です"); }
 }
 
 // 3. ページ読み込み時に実行
-window.addEventListener('load', startCamera);
-
-  // 撮影ボタン処理
-  // 撮影処理内のOpenCVロジックを以下に差し替え
 captureBtn.addEventListener('click', async () => {
   // 1. 画像読み込み
   const tempCanvas = document.createElement('canvas');
@@ -129,30 +132,23 @@ captureBtn.addEventListener('click', async () => {
   let contours = new cv.MatVector();
   let hierarchy = new cv.Mat();
 
-  // 2. 前処理：コントラストを抑えてエッジを出しやすくする
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
   cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
-  
-  // ★変更点：adaptiveThresholdを外し、Cannyで直接エッジを出す方が安定する場合が多い
   cv.Canny(blur, canny, 30, 100); 
-
-  // 3. 輪郭抽出
   cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-  // 4. 最適な輪郭（4点に近似できる最大のもの）を探す
   let bestContour = null;
   let maxArea = 0;
 
   for (let i = 0; i < contours.size(); ++i) {
     let cnt = contours.get(i);
     let area = cv.contourArea(cnt);
-    if (area < 1000) continue; // 小さすぎるノイズは無視
+    if (area < 1000) continue;
 
     let perimeter = cv.arcLength(cnt, true);
     let approx = new cv.Mat();
     cv.approxPolyDP(cnt, approx, 0.02 * perimeter, true);
 
-    // ★重要：4点に近似できるかチェック
     if (approx.rows === 4 && area > maxArea) {
       maxArea = area;
       bestContour = cnt;
@@ -160,10 +156,15 @@ captureBtn.addEventListener('click', async () => {
     approx.delete();
   }
 
+    
   // 5. 結果処理
   if (bestContour) {
     warpPerspective(src, bestContour);
-    // ...以降、表示切り替え処理
+// ★UI切り替えロジック
+    video.style.display = 'none';      // カメラを非表示
+    canvas.style.display = 'block';    // トリミング結果を表示
+    captureBtn.style.display = 'none'; // 撮影ボタンを隠す
+    actionBtns.style.display = 'block';// 送信・取り直しを表示
   } else {
     alert("名刺の4隅が見つかりませんでした。名刺の背景と色がはっきり分かれる場所で撮影してください。");
   }
