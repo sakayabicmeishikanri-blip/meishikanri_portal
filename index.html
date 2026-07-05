@@ -10,6 +10,47 @@
     #snapBtn { width: 80%; padding: 20px; margin: 20px; font-size: 18px; background: #007bff; color: white; }
     #sendBtn { width: 80%; padding: 20px; margin: 20px; font-size: 18px; background: green; color: white; }
     #retryBtn { width: 80%; padding: 20px; margin: 20px; font-size: 18px; background: red; color: white; }
+
+    #camera-container {
+  position: relative;
+  width: 100%;
+  height: 100vh; /* 全画面 */
+}
+
+#video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* カメラ映像を画面全体にフィット */
+}
+
+#guide-frame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  /* 名刺の一般的なアスペクト比（例: 55mm x 91mm） */
+  width: 80vw; /* 画面幅の80% */
+  height: calc(80vw * (55 / 91)); /* 比率を維持して高さを計算 */
+  
+  border: 2px solid rgba(255, 255, 0, 0.8); /* 黄色のガイド枠 */
+  pointer-events: none; /* 枠はクリックを透過させる */
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); /* 枠外を暗くする */
+}
+
+.corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-color: #FFD700; /* ゴールド */
+  border-style: solid;
+  pointer-events: none;
+}
+
+.top-left { top: -2px; left: -2px; border-width: 4px 0 0 4px; }
+.top-right { top: -2px; right: -2px; border-width: 4px 4px 0 0; }
+.bottom-left { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; }
+.bottom-right { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; }
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
@@ -17,7 +58,16 @@
 <body>
   <video id="video" playsinline autoplay></video>
   <div id="controls">
-  <button id="snapBtn">撮影</button>
+  <div id="camera-container">
+  <video id="video" autoplay playsinline></video>
+  <div id="guide-frame">
+    <div class="corner top-left"></div>
+    <div class="corner top-right"></div>
+    <div class="corner bottom-left"></div>
+    <div class="corner bottom-right"></div>
+  </div>
+  <button id="capture-btn">撮影</button>
+</div>
     <div id="actionBtns" style="display:none;">
     <button id="sendBtn">送信</button>
     <button id="retryBtn">取り直し</button>
@@ -27,50 +77,92 @@
 
  <script>
     const video = document.getElementById('video');
+const captureBtn = document.getElementById('capture-btn');
     const canvas = document.getElementById('outputCanvas');
     const snapBtn = document.getElementById('snapBtn');
     const actionBtns = document.getElementById('actionBtns');
     const sendBtn = document.getElementById('sendBtn');
     const retryBtn = document.getElementById('retryBtn');
 
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } }
-        });
-        video.srcObject = stream;
-        video.play();
-      } catch (err) { alert("カメラ起動失敗: " + err); }
+async function startCamera() {
+  // ★ここを書き換えます
+  const constraints = {
+    video: {
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      facingMode: { ideal: "environment" }, // 背面カメラを優先
+      advanced: [{ focusMode: "continuous" }] // 可能ならオートフォーカスを継続
     }
-    startCamera();
+  };
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = stream;
+    console.log("カメラが高画質設定で起動しました");
+  } catch (err) {
+    console.error("カメラの起動に失敗しました: ", err);
+    alert("カメラへのアクセスを許可してください");
+  }
+}
+
+// 3. ページ読み込み時に実行
+window.addEventListener('load', startCamera);
+   
     
     // 撮影ボタンの処理
-    snapBtn.addEventListener('click', () => {
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = video.videoWidth;
-      tempCanvas.height = video.videoHeight;
-      tempCanvas.getContext('2d').drawImage(video, 0, 0);
+captureBtn.addEventListener('click', async () => {
+  // 1. 現在の映像を tempCanvas に反映（念のため）
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
 
-      let src = cv.imread(tempCanvas);
-      let gray = new cv.Mat();
-      let canny = new cv.Mat();
-      let contours = new cv.MatVector();
-      let hierarchy = new cv.Mat();
+  let src = cv.imread(tempCanvas);
+  let gray = new cv.Mat();
+  let canny = new cv.Mat();
+  let contours = new cv.MatVector();
+  let hierarchy = new cv.Mat();
 
-      cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-      cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
-      cv.Canny(gray, canny, 50, 150);
-      cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+  // 2. 前処理：グレースケール ＋ ガウスぼかし ＋ 適応型しきい値処理
+  // 適応型しきい値を使うことで、照明ムラがあっても輪郭が残りやすくなります
+  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+  cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
+  cv.adaptiveThreshold(gray, gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
 
-      if (contours.size() > 0) {
-        warpPerspective(src, contours);
-        snapBtn.style.display = 'none';
-        actionBtns.style.display = 'block';
-      } else {
-        alert("輪郭が見つかりません。");
-      }
-      src.delete(); gray.delete(); canny.delete(); contours.delete(); hierarchy.delete();
-    });
+  // 3. エッジ検出
+  cv.Canny(gray, canny, 75, 200);
+
+  // 4. 輪郭抽出
+  cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+  // 5. ★最重要：最大の面積を持つ輪郭だけを名刺として採用する
+  let maxArea = 0;
+  let maxContour = null;
+
+  for (let i = 0; i < contours.size(); ++i) {
+    let cnt = contours.get(i);
+    let area = cv.contourArea(cnt);
+    // 小さすぎるノイズを除去（画面の10%以下の面積は無視）
+    if (area > (src.cols * src.rows * 0.1) && area > maxArea) {
+      maxArea = area;
+      maxContour = cnt;
+    }
+  }
+
+  // 6. 結果の処理
+  if (maxContour) {
+    // 既存の warpPerspective には MatVector ではなく一つの輪郭を渡すように関数側も調整してください
+    warpPerspective(src, maxContour); 
+    
+    snapBtn.style.display = 'none';
+    actionBtns.style.display = 'block';
+  } else {
+    // ガイド枠を出すためのヒント（アラートではなくログ推奨）
+    console.warn("名刺の輪郭を特定できませんでした。明るい場所で撮影してください。");
+    alert("名刺が認識できませんでした。枠内に名刺全体を収めてください。");
+  }
+
+  // 7. メモリ解放
+  src.delete(); gray.delete(); canny.delete(); contours.delete(); hierarchy.delete();
+});
 
     // 台形補正関数（外に出しました！）
     function warpPerspective(src, contours) {
@@ -135,7 +227,7 @@ async function uploadDirectly(canvas) {
   });
 
     if (response.ok) {
-      alert('送信成功！');
+      alert('サーバーに送信しました');
     } else {
       const err = await response.text();
       alert('サーバーエラー: ' + err); // 2. サーバーが何か返しているか確認
