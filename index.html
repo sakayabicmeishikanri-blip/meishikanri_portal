@@ -174,7 +174,7 @@ captureBtn.addEventListener('click', async () => {
 
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
   cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
-  cv.Canny(blur, canny, 30, 100); 
+  cv.Canny(blur, canny, 20, 80); 
   cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
   let bestContour = null;
@@ -185,7 +185,7 @@ captureBtn.addEventListener('click', async () => {
     if (area < 1000) continue;
     let perimeter = cv.arcLength(cnt, true);
     let approx = new cv.Mat();
-    cv.approxPolyDP(cnt, approx, 0.02 * perimeter, true);
+    cv.approxPolyDP(cnt, approx, 0.04 * perimeter, true);
     if (approx.rows === 4 && area > maxArea) { maxArea = area; bestContour = cnt; }
     approx.delete();
   }
@@ -197,7 +197,10 @@ captureBtn.addEventListener('click', async () => {
     captureBtn.style.display = 'none';
     actionBtns.style.display = 'block';
   } else {
-    alert("名刺の4隅が見つかりませんでした。");
+    // ★失敗時の処理をここに統合
+    alert("名刺が見つかりません。明るい場所で撮り直してください。");
+    video.style.display = 'block';
+    detectLoop(); // 失敗したらループを再開
   }
   src.delete(); gray.delete(); blur.delete(); canny.delete(); contours.delete(); hierarchy.delete();
 });
@@ -243,8 +246,13 @@ retryBtn.addEventListener('click', () => {
     let M = cv.getPerspectiveTransform(srcTri, dstTri);
     let dst = new cv.Mat();
     cv.warpPerspective(src, dst, M, new cv.Size(dstWidth, dstHeight));
+    // ★重要：ここで画像を明るくする（正規化）
+  let normalized = new cv.Mat();
+  cv.normalize(dst, normalized, 0, 255, cv.NORM_MINMAX);
     
-    cv.imshow('outputCanvas', dst);
+   cv.imshow('outputCanvas', normalized); // 明るい画像を表示
+    normalized.delete();
+  dst.delete();
     
     srcTri.delete(); dstTri.delete(); M.delete(); dst.delete(); approx.delete();
   }
