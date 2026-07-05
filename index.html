@@ -86,40 +86,80 @@
 </div>
   
  <script>
-    const video = document.getElementById('video');
+const video = document.getElementById('video');
 const captureBtn = document.getElementById('capture-btn');
-    const canvas = document.getElementById('outputCanvas');
-    const snapBtn = document.getElementById('snapBtn');
-    const actionBtns = document.getElementById('actionBtns');
-    const sendBtn = document.getElementById('sendBtn');
-    const retryBtn = document.getElementById('retryBtn');
+const canvas = document.getElementById('outputCanvas');
+const guideFrame = document.getElementById('guide-frame');
+const actionBtns = document.getElementById('actionBtns');
+const sendBtn = document.getElementById('sendBtn');
+const retryBtn = document.getElementById('retryBtn');
 
+// 1. カメラ起動
 async function startCamera() {
-  // ★ここを書き換えます
   const constraints = {
     video: {
-      // 画面の幅・高さを基準にする
-      width: { ideal: window.screen.width * window.devicePixelRatio },
-      height: { ideal: window.screen.height * window.devicePixelRatio },
-      facingMode: { ideal: "environment" } ,// 背面カメラを優先
-      advanced: [{ focusMode: "continuous" }] // 可能ならオートフォーカスを継続
+      width: { ideal: 1920 },
+      height: { ideal: 1080 },
+      facingMode: { ideal: "environment" },
+      advanced: [{ focusMode: "continuous" }]
     }
   };
 
-try {
+  try {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = stream;
-    
-    // ★ここに追加：ビデオが読み込まれたらループを開始
+    // ビデオメタデータ読み込み後にループ開始
     video.onloadedmetadata = () => {
       detectLoop();
     };
-  } catch (err) { alert("カメラアクセスが必要です"); }
+  } catch (err) {
+    console.error(err);
+    alert("カメラへのアクセスを許可してください");
+  }
 }
 
-// 3. ページ読み込み時に実行
+// 2. 枠線色を変えるループ処理
+function detectLoop() {
+  if (!video.videoWidth) return; // 映像未読み込みなら待つ
+
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = 320;
+  tempCanvas.height = 240;
+  tempCanvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
+
+  let src = cv.imread(tempCanvas);
+  let gray = new cv.Mat();
+  let canny = new cv.Mat();
+  let contours = new cv.MatVector();
+  let hierarchy = new cv.Mat();
+
+  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+  cv.Canny(gray, canny, 50, 150);
+  cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+  let found = false;
+  for (let i = 0; i < contours.size(); ++i) {
+    let cnt = contours.get(i);
+    let perimeter = cv.arcLength(cnt, true);
+    let approx = new cv.Mat();
+    cv.approxPolyDP(cnt, approx, 0.02 * perimeter, true);
+    if (approx.rows === 4 && cv.contourArea(cnt) > 2000) { found = true; }
+    approx.delete();
+  }
+  guideFrame.className = found ? 'guide-detected' : 'guide-default';
+
+  src.delete(); gray.delete(); canny.delete(); contours.delete(); hierarchy.delete();
+  
+  if (video.style.display !== 'none') {
+    setTimeout(() => requestAnimationFrame(detectLoop), 200);
+  }
+}
+
+// 3. 実行開始
+window.addEventListener('load', startCamera);
+
+// 4. 撮影処理
 captureBtn.addEventListener('click', async () => {
-  // 1. 画像読み込み
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = video.videoWidth;
   tempCanvas.height = video.videoHeight;
@@ -139,37 +179,36 @@ captureBtn.addEventListener('click', async () => {
 
   let bestContour = null;
   let maxArea = 0;
-
   for (let i = 0; i < contours.size(); ++i) {
     let cnt = contours.get(i);
     let area = cv.contourArea(cnt);
     if (area < 1000) continue;
-
     let perimeter = cv.arcLength(cnt, true);
     let approx = new cv.Mat();
     cv.approxPolyDP(cnt, approx, 0.02 * perimeter, true);
-
-    if (approx.rows === 4 && area > maxArea) {
-      maxArea = area;
-      bestContour = cnt;
-    }
+    if (approx.rows === 4 && area > maxArea) { maxArea = area; bestContour = cnt; }
     approx.delete();
   }
 
-    
-  // 5. 結果処理
   if (bestContour) {
     warpPerspective(src, bestContour);
-// ★UI切り替えロジック
-    video.style.display = 'none';      // カメラを非表示
-    canvas.style.display = 'block';    // トリミング結果を表示
-    captureBtn.style.display = 'none'; // 撮影ボタンを隠す
-    actionBtns.style.display = 'block';// 送信・取り直しを表示
+    video.style.display = 'none';
+    canvas.style.display = 'block';
+    captureBtn.style.display = 'none';
+    actionBtns.style.display = 'block';
   } else {
-    alert("名刺の4隅が見つかりませんでした。名刺の背景と色がはっきり分かれる場所で撮影してください。");
+    alert("名刺の4隅が見つかりませんでした。");
   }
-
   src.delete(); gray.delete(); blur.delete(); canny.delete(); contours.delete(); hierarchy.delete();
+});
+
+// Retry処理（カメラ再表示用）
+retryBtn.addEventListener('click', () => {
+  video.style.display = 'block';
+  canvas.style.display = 'none';
+  captureBtn.style.display = 'block';
+  actionBtns.style.display = 'none';
+  detectLoop(); // ループ再開
 });
 
     // 台形補正関数（外に出しました！）
