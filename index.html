@@ -24,15 +24,18 @@
     }
 
     #guide-frame {
-      position: absolute;
-      top: 33.3vh;
-      width: 80vw;
-      height: calc(80vw * 55 / 91);
-      border: 2px solid rgba(255, 255, 0, 0.8);
-      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-      pointer-events: none;
-    }
-
+     position: absolute;
+  /* 画面の中央に配置 */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  width: 80vw;
+  height: calc(80vw * 55 / 91);
+  border: 2px solid rgba(255, 255, 0, 0.8);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
     #controls {
       position: absolute;
       bottom: 50px;
@@ -114,44 +117,62 @@ async function startCamera() {
 window.addEventListener('load', startCamera);
 
   // 撮影ボタン処理
-  captureBtn.addEventListener('click', async () => {
-    // 描画用のキャンバスを一時作成
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
-    tempCanvas.getContext('2d').drawImage(video, 0, 0);
+  // 撮影処理内のOpenCVロジックを以下に差し替え
+captureBtn.addEventListener('click', async () => {
+  // 1. 画像読み込み
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = video.videoWidth;
+  tempCanvas.height = video.videoHeight;
+  tempCanvas.getContext('2d').drawImage(video, 0, 0);
 
-    let src = cv.imread(tempCanvas);
-    let gray = new cv.Mat();
-    let canny = new cv.Mat();
-    let contours = new cv.MatVector();
-    let hierarchy = new cv.Mat();
+  let src = cv.imread(tempCanvas);
+  let gray = new cv.Mat();
+  let blur = new cv.Mat();
+  let canny = new cv.Mat();
+  let contours = new cv.MatVector();
+  let hierarchy = new cv.Mat();
 
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-    cv.GaussianBlur(gray, gray, new cv.Size(5, 5), 0);
-    cv.adaptiveThreshold(gray, gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 11, 2);
-    cv.Canny(gray, canny, 75, 200);
-    cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+  // 2. 前処理：コントラストを抑えてエッジを出しやすくする
+  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+  cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+  
+  // ★変更点：adaptiveThresholdを外し、Cannyで直接エッジを出す方が安定する場合が多い
+  cv.Canny(blur, canny, 30, 100); 
 
-    let maxArea = 0, maxContour = null;
-    for (let i = 0; i < contours.size(); ++i) {
-      let area = cv.contourArea(contours.get(i));
-      if (area > (src.cols * src.rows * 0.1) && area > maxArea) {
-        maxArea = area; maxContour = contours.get(i);
-      }
+  // 3. 輪郭抽出
+  cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+  // 4. 最適な輪郭（4点に近似できる最大のもの）を探す
+  let bestContour = null;
+  let maxArea = 0;
+
+  for (let i = 0; i < contours.size(); ++i) {
+    let cnt = contours.get(i);
+    let area = cv.contourArea(cnt);
+    if (area < 1000) continue; // 小さすぎるノイズは無視
+
+    let perimeter = cv.arcLength(cnt, true);
+    let approx = new cv.Mat();
+    cv.approxPolyDP(cnt, approx, 0.02 * perimeter, true);
+
+    // ★重要：4点に近似できるかチェック
+    if (approx.rows === 4 && area > maxArea) {
+      maxArea = area;
+      bestContour = cnt;
     }
+    approx.delete();
+  }
 
-    if (maxContour) {
-      warpPerspective(src, maxContour);
-      video.style.display = 'none';
-      canvas.style.display = 'block';
-      captureBtn.style.display = 'none';
-      actionBtns.style.display = 'block';
-    } else {
-      alert("名刺が見つかりません。枠内に収めてください。");
-    }
-    src.delete(); gray.delete(); canny.delete(); contours.delete(); hierarchy.delete();
-  });
+  // 5. 結果処理
+  if (bestContour) {
+    warpPerspective(src, bestContour);
+    // ...以降、表示切り替え処理
+  } else {
+    alert("名刺の4隅が見つかりませんでした。名刺の背景と色がはっきり分かれる場所で撮影してください。");
+  }
+
+  src.delete(); gray.delete(); blur.delete(); canny.delete(); contours.delete(); hierarchy.delete();
+});
 
     // 台形補正関数（外に出しました！）
 // warpPerspective の完全版ロジック
