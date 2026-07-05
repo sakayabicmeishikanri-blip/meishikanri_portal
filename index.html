@@ -3,54 +3,56 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
-    body { background: #000; color: white; text-align: center; }
-    #video { width: 100%; height: 40vh; object-fit: cover; }
-    #snap { width: 80%; padding: 20px; margin: 20px; font-size: 18px; background: #007bff; color: white; }
-    #outputCanvas { width: 90%; margin-top: 20px; border: 3px solid red; background: #333; }
-    #snapBtn { width: 80%; padding: 20px; margin: 20px; font-size: 18px; background: #007bff; color: white; }
-    #sendBtn { width: 80%; padding: 20px; margin: 20px; font-size: 18px; background: green; color: white; }
-    #retryBtn { width: 80%; padding: 20px; margin: 20px; font-size: 18px; background: red; color: white; }
-
+<style>
+    body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+    
     #camera-container {
-  position: relative;
-  width: 100%;
-  height: 100vh; /* 全画面 */
-}
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
 
-#video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* カメラ映像を画面全体にフィット */
-}
+    #video {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
 
-#guide-frame {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  
-  /* 名刺の一般的なアスペクト比（例: 55mm x 91mm） */
-  width: 80vw; /* 画面幅の80% */
-  height: calc(80vw * (55 / 91)); /* 比率を維持して高さを計算 */
-  
-  border: 2px solid rgba(255, 255, 0, 0.8); /* 黄色のガイド枠 */
-  pointer-events: none; /* 枠はクリックを透過させる */
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); /* 枠外を暗くする */
-}
+    #guide-frame {
+      position: absolute;
+      width: 80vw;
+      height: calc(80vw * 55 / 91);
+      border: 2px solid rgba(255, 255, 0, 0.8);
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+    }
 
-.corner {
-  position: absolute;
-  width: 30px;
-  height: 30px;
-  border-color: #FFD700; /* ゴールド */
-  border-style: solid;
-  pointer-events: none;
-}
+    #controls {
+      position: absolute;
+      bottom: 30px;
+      z-index: 10;
+      width: 100%;
+      text-align: center;
+    }
 
-.top-left { top: -2px; left: -2px; border-width: 4px 0 0 4px; }
-.top-right { top: -2px; right: -2px; border-width: 4px 4px 0 0; }
-.bottom-left { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; }
-.bottom-right { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; }
+    button {
+      padding: 15px 40px;
+      font-size: 18px;
+      border-radius: 30px;
+      border: none;
+      margin: 5px;
+    }
+    #capture-btn { background: #007bff; color: white; }
+    #sendBtn { background: green; color: white; }
+    #retryBtn { background: red; color: white; }
+    
+    #outputCanvas { display: none; width: 90vw; margin: auto; }
+  </style>
   </style>
 
   <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
