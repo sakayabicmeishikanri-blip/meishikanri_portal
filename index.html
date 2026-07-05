@@ -56,22 +56,20 @@
   <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
 </head>
 <body>
-  <div id="camera-container">
-  <video id="video" autoplay playsinline></video>
-  <div id="guide-frame">
-    <div class="corner top-left"></div>
-    <div class="corner top-right"></div>
-    <div class="corner bottom-left"></div>
-    <div class="corner bottom-right"></div>
-  </div>
-  <button id="capture-btn">撮影</button>
-</div>
+<div id="camera-container">
+  <video id="video" playsinline autoplay></video>
+  <div id="guide-frame"></div>
+  
+  <div id="controls">
+    <button id="capture-btn">撮影</button>
     <div id="actionBtns" style="display:none;">
-    <button id="sendBtn">送信</button>
-    <button id="retryBtn">取り直し</button>
+      <button id="sendBtn">送信</button>
+      <button id="retryBtn">取り直し</button>
+    </div>
   </div>
 </div>
-  <canvas id="outputCanvas"></canvas>
+
+<canvas id="outputCanvas"></canvas>
 
  <script>
     const video = document.getElementById('video');
