@@ -6,34 +6,31 @@
 <style>
     body { margin: 0; padding: 0; background: #000; overflow: hidden; }
     
-    #camera-container {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #video {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 66.6vh;
-      object-fit: cover;
-    }
-
-    #guide-frame {
-     position: absolute;
-  /* 画面の中央に配置 */
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  
+#camera-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  overflow: hidden;
+  /* 子要素を中央寄せにする準備 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+  #video {
+  /* 画面全体を埋めるように配置 */
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+#guide-frame {
+  position: relative; /* containerの中央配置に追従させる */
+  z-index: 2;
   width: 80vw;
   height: calc(80vw * 55 / 91);
   border: 2px solid rgba(255, 255, 0, 0.8);
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
   pointer-events: none;
 }
     #controls {
