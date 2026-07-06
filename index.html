@@ -187,6 +187,7 @@ captureBtn.addEventListener('click', async () => {
     canvas.style.display = 'block';
     captureBtn.style.display = 'none';
     actionBtns.style.display = 'block';
+    guideFrame.style.display = 'none';
   } else {
     alert("認識できませんでした。");
     isDetecting = true;
@@ -201,6 +202,7 @@ retryBtn.addEventListener('click', () => {
   canvas.style.display = 'none';
   captureBtn.style.display = 'block';
   actionBtns.style.display = 'none';
+  guideFrame.style.display = 'block';
   const context = canvas.getContext('2d');
   context.clearRect(0, 0, canvas.width, canvas.height);
   isDetecting = true;
