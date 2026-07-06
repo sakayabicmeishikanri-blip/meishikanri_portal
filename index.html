@@ -102,6 +102,7 @@ const sendBtn = document.getElementById('sendBtn');
 const retryBtn = document.getElementById('retryBtn');
 
 let isDetecting = true;
+let captureCounter = 0; // ここに宣言が必要
 
 // 1. カメラ起動
 async function startCamera() {
@@ -120,7 +121,7 @@ async function startCamera() {
   } catch (err) { alert("カメラアクセスを許可してください"); }
 }
 
-// 2. ループ処理 (赤枠によるフィードバック)
+// 2. ループ処理
 function detectLoop() {
   if (!isDetecting) return;
   if (video.style.display === 'none') return;
@@ -136,21 +137,19 @@ function detectLoop() {
   let hierarchy = new cv.Mat();
 
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-  cv.Canny(gray, canny, 50, 150); // Cannyは少し強めの方が輪郭が出やすいです
+  cv.Canny(gray, canny, 50, 150);
   cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
   let found = false;
-  // 面積の基準値を外に計算
   let minArea = (video.videoWidth * video.videoHeight) * 0.08;
   let maxArea = (video.videoWidth * video.videoHeight) * 0.40;
 
   for (let i = 0; i < contours.size(); ++i) {
     let cnt = contours.get(i);
-    let area = cv.contourArea(cnt); // ここで取得
+    let area = cv.contourArea(cnt);
     let approx = new cv.Mat();
     cv.approxPolyDP(cnt, approx, 0.04 * cv.arcLength(cnt, true), true);
 
-    // アスペクト比の判定を追加（1.3～2.0は名刺として妥当な範囲）
     let rect = cv.boundingRect(cnt);
     let aspectRatio = rect.width / rect.height;
     let isGoodAspectRatio = aspectRatio > 1.3 && aspectRatio < 2.0;
@@ -163,18 +162,21 @@ function detectLoop() {
   
   guideFrame.className = found ? 'guide-detected' : 'guide-default';
 
-  src.delete(); gray.delete(); canny.delete(); contours.delete(); hierarchy.delete();
-  setTimeout(() => requestAnimationFrame(detectLoop), 200);
-}
-if (found) {
+  // ★ここで自動撮影判定
+  if (found) {
     captureCounter++;
-    if (captureCounter >= 3) { // 3回連続認識で自動撮影
+    if (captureCounter >= 3) {
       captureCounter = 0;
-      captureBtn.click(); // 撮影ボタンを自動実行
+      captureBtn.click();
     }
   } else {
     captureCounter = 0;
   }
+
+  src.delete(); gray.delete(); canny.delete(); contours.delete(); hierarchy.delete();
+  setTimeout(() => requestAnimationFrame(detectLoop), 200);
+}
+
 // 3. 撮影処理
 captureBtn.addEventListener('click', async () => {
   isDetecting = false;
@@ -191,7 +193,7 @@ captureBtn.addEventListener('click', async () => {
 
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
   cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
-  cv.Canny(blur, canny, 30, 100);
+  cv.Canny(blur, canny, 20, 80);
   cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
   let bestContour = null, maxArea = 0;
@@ -211,11 +213,12 @@ captureBtn.addEventListener('click', async () => {
     video.style.display = 'none';
     canvas.style.display = 'block';
     captureBtn.style.display = 'none';
-    actionBtns.style.display = 'flex'; // flexで中央揃え維持
+    actionBtns.style.display = 'flex';
     guideFrame.style.display = 'none';
   } else {
     alert("認識できませんでした。");
     isDetecting = true;
+    captureCounter = 0; // カウンターリセット
     detectLoop();
   }
   src.delete(); gray.delete(); blur.delete(); canny.delete(); contours.delete(); hierarchy.delete();
@@ -228,13 +231,12 @@ retryBtn.addEventListener('click', () => {
   captureBtn.style.display = 'block';
   actionBtns.style.display = 'none';
   guideFrame.style.display = 'block';
-  const context = canvas.getContext('2d');
-  context.clearRect(0, 0, canvas.width, canvas.height);
   isDetecting = true;
+  captureCounter = 0;
   detectLoop();
 });
 
-// 5. 台形補正関数
+// 5. warpPerspective (省略なし)
 function warpPerspective(src, contour) {
   let perimeter = cv.arcLength(contour, true);
   let approx = new cv.Mat();
@@ -251,39 +253,19 @@ function warpPerspective(src, contour) {
 
   let dstWidth = 800, dstHeight = 500;
   canvas.width = dstWidth; canvas.height = dstHeight;
-
   let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
     sortedPoints[0].x, sortedPoints[0].y, sortedPoints[1].x, sortedPoints[1].y,
     sortedPoints[2].x, sortedPoints[2].y, sortedPoints[3].x, sortedPoints[3].y
   ]);
   let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight]);
-  
   let M = cv.getPerspectiveTransform(srcTri, dstTri);
   let dst = new cv.Mat();
   cv.warpPerspective(src, dst, M, new cv.Size(dstWidth, dstHeight));
-
   let normalized = new cv.Mat();
   cv.normalize(dst, normalized, 0, 255, cv.NORM_MINMAX);
   cv.imshow('outputCanvas', normalized);
-
   normalized.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete(); approx.delete();
 }
-
-// 6. アップロード処理
-sendBtn.addEventListener('click', async () => {
-  const base64data = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-  const fileName = `card_${Date.now()}.jpg`;
-  const cloudRunUrl = 'https://meishikanrirun-308432369710.asia-northeast2.run.app';
-  try {
-    const response = await fetch(cloudRunUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ base64Data: base64data, fileName: fileName })
-    });
-    if (response.ok) alert('サーバーに送信しました');
-    else alert('サーバーエラー');
-  } catch (e) { alert('通信失敗: ' + e.message); }
-});
 
 window.addEventListener('load', startCamera);
   </script>
