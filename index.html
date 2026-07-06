@@ -85,7 +85,8 @@
   </div>
 </div>
   
- <script>
+  
+  <script>
 const video = document.getElementById('video');
 const captureBtn = document.getElementById('capture-btn');
 const canvas = document.getElementById('outputCanvas');
@@ -93,6 +94,8 @@ const guideFrame = document.getElementById('guide-frame');
 const actionBtns = document.getElementById('actionBtns');
 const sendBtn = document.getElementById('sendBtn');
 const retryBtn = document.getElementById('retryBtn');
+
+let isDetecting = true; // ループ制御フラグ
 
 // 1. カメラ起動
 async function startCamera() {
@@ -104,27 +107,20 @@ async function startCamera() {
       advanced: [{ focusMode: "continuous" }]
     }
   };
-
   try {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     video.srcObject = stream;
-    // ビデオメタデータ読み込み後にループ開始
-    video.onloadedmetadata = () => {
-      detectLoop();
-    };
-  } catch (err) {
-    console.error(err);
-    alert("カメラへのアクセスを許可してください");
-  }
+    video.onloadedmetadata = () => detectLoop();
+  } catch (err) { alert("カメラアクセスを許可してください"); }
 }
 
-// 2. 枠線色を変えるループ処理
+// 2. ループ処理
 function detectLoop() {
-  if (!video.videoWidth) return; // 映像未読み込みなら待つ
+  if (!isDetecting) return;
+  if (video.style.display === 'none') return;
 
   const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = 320;
-  tempCanvas.height = 240;
+  tempCanvas.width = 320; tempCanvas.height = 240;
   tempCanvas.getContext('2d').drawImage(video, 0, 0, 320, 240);
 
   let src = cv.imread(tempCanvas);
@@ -140,29 +136,22 @@ function detectLoop() {
   let found = false;
   for (let i = 0; i < contours.size(); ++i) {
     let cnt = contours.get(i);
-    let perimeter = cv.arcLength(cnt, true);
     let approx = new cv.Mat();
-    cv.approxPolyDP(cnt, approx, 0.02 * perimeter, true);
-    if (approx.rows === 4 && cv.contourArea(cnt) > 2000) { found = true; }
+    cv.approxPolyDP(cnt, approx, 0.04 * cv.arcLength(cnt, true), true);
+    if (approx.rows === 4 && cv.contourArea(cnt) > 2000) found = true;
     approx.delete();
   }
   guideFrame.className = found ? 'guide-detected' : 'guide-default';
 
   src.delete(); gray.delete(); canny.delete(); contours.delete(); hierarchy.delete();
-  
-  if (video.style.display !== 'none') {
-    setTimeout(() => requestAnimationFrame(detectLoop), 200);
-  }
+  setTimeout(() => requestAnimationFrame(detectLoop), 200);
 }
 
-// 3. 実行開始
-window.addEventListener('load', startCamera);
-
-// 4. 撮影処理
+// 3. 撮影処理
 captureBtn.addEventListener('click', async () => {
+  isDetecting = false; // ループ一時停止
   const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = video.videoWidth;
-  tempCanvas.height = video.videoHeight;
+  tempCanvas.width = video.videoWidth; tempCanvas.height = video.videoHeight;
   tempCanvas.getContext('2d').drawImage(video, 0, 0);
 
   let src = cv.imread(tempCanvas);
@@ -174,19 +163,18 @@ captureBtn.addEventListener('click', async () => {
 
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
   cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
-  cv.Canny(blur, canny, 20, 80); 
+  cv.Canny(blur, canny, 20, 80);
   cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-  let bestContour = null;
-  let maxArea = 0;
+  let bestContour = null, maxArea = 0;
   for (let i = 0; i < contours.size(); ++i) {
     let cnt = contours.get(i);
-    let area = cv.contourArea(cnt);
-    if (area < 1000) continue;
-    let perimeter = cv.arcLength(cnt, true);
     let approx = new cv.Mat();
-    cv.approxPolyDP(cnt, approx, 0.04 * perimeter, true);
-    if (approx.rows === 4 && area > maxArea) { maxArea = area; bestContour = cnt; }
+    cv.approxPolyDP(cnt, approx, 0.04 * cv.arcLength(cnt, true), true);
+    if (approx.rows === 4 && cv.contourArea(cnt) > maxArea) {
+      maxArea = cv.contourArea(cnt);
+      bestContour = cnt;
+    }
     approx.delete();
   }
 
@@ -197,22 +185,27 @@ captureBtn.addEventListener('click', async () => {
     captureBtn.style.display = 'none';
     actionBtns.style.display = 'block';
   } else {
-    // ★失敗時の処理をここに統合
-    alert("名刺が見つかりません。明るい場所で撮り直してください。");
-    video.style.display = 'block';
-    detectLoop(); // 失敗したらループを再開
+    alert("認識できませんでした。");
+    isDetecting = true;
+    detectLoop();
   }
   src.delete(); gray.delete(); blur.delete(); canny.delete(); contours.delete(); hierarchy.delete();
 });
 
-// Retry処理（カメラ再表示用）
+// 4. Retry処理（重複を排除して一本化）
 retryBtn.addEventListener('click', () => {
   video.style.display = 'block';
   canvas.style.display = 'none';
   captureBtn.style.display = 'block';
   actionBtns.style.display = 'none';
-  detectLoop(); // ループ再開
+  const context = canvas.getContext('2d');
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  isDetecting = true;
+  detectLoop();
 });
+
+// (ここに warpPerspective と uploadDirectly を記載してください)
+window.addEventListener('load', startCamera);
 
     // 台形補正関数（外に出しました！）
 // warpPerspective の完全版ロジック
