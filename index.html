@@ -42,17 +42,15 @@
   /* 背景を暗くせず、枠だけ赤くする */
 }
     
-    #controls {
-      position: absolute;
-      bottom: 50px;
-      z-index: 20;
-      width: 100%;
-      display: flex;         /* flexで中央揃え */
+#controls {
+  position: absolute;
+  bottom: 50px;
+  width: 100%;
+  display: flex;
   justify-content: center;
   align-items: center;
-      text-align: center;
-      padding-bottom: env(safe-area-inset-bottom);
-    }
+  z-index: 20;
+}
 
     button {
       padding: 15px 40px;
@@ -61,7 +59,8 @@
       border: none;
       margin: 5px;
     }
-    #capture-btn { background: #007bff; color: white; }
+    #capture-btn { display: block; } /* 常に表示させておく */
+#actionBtns { display: none; }   /* 初期状態は非表示 */
     #sendBtn { background: green; color: white; }
     #retryBtn { background: red; color: white; }
     
