@@ -59,13 +59,15 @@
     #sendBtn { background: green; color: white; }
     #retryBtn { background: red; color: white; }
     
-    #outputCanvas { 
-      display: none; 
-      width: 100%; 
-      height: 66.6vh;
-      object-fit: contain;
-      background: #333;
-    }
+    #outputCanvas {
+  display: none;
+  width: 80vw;    /* 端末画面幅の80%で表示 */
+  height: auto;   /* アスペクト比を維持 */
+  margin: 20px auto;
+  border: 5px solid #fff;
+  /* 画像が拡大表示される際にボケないようにする設定 */
+  image-rendering: -webkit-optimize-contrast;
+}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
 </head>
@@ -138,7 +140,8 @@ function detectLoop() {
     let cnt = contours.get(i);
     let approx = new cv.Mat();
     cv.approxPolyDP(cnt, approx, 0.04 * cv.arcLength(cnt, true), true);
-    if (approx.rows === 4 && cv.contourArea(cnt) > 2000) found = true;
+    let minArea = (video.videoWidth * video.videoHeight) * 0.1; // 画面の10%以上の面積ならOK
+　　if (approx.rows === 4 && cv.contourArea(cnt) > minArea) { found = true; }
     approx.delete();
   }
   guideFrame.className = found ? 'guide-detected' : 'guide-default';
@@ -208,47 +211,60 @@ retryBtn.addEventListener('click', () => {
 window.addEventListener('load', startCamera);
 
     // 台形補正関数（外に出しました！）
-// warpPerspective の完全版ロジック
-  function warpPerspective(src, contour) {
-    let perimeter = cv.arcLength(contour, true);
-    let approx = new cv.Mat();
-    cv.approxPolyDP(contour, approx, 0.02 * perimeter, true);
-    
-    if (approx.rows !== 4) {
-      alert("4隅が認識できませんでした。");
-      approx.delete();
-      return;
-    }
+function warpPerspective(src, contour) {
+  let perimeter = cv.arcLength(contour, true);
+  let approx = new cv.Mat();
+  cv.approxPolyDP(contour, approx, 0.04 * perimeter, true);
 
-    let points = [];
-    for (let i = 0; i < 4; i++) {
-      points.push({ x: approx.data32S[i * 2], y: approx.data32S[i * 2 + 1] });
-    }
-    // 座標のソート（台形補正用）
-    points.sort((a, b) => a.y - b.y);
-    let top = points.slice(0, 2).sort((a, b) => a.x - b.x);
-    let bottom = points.slice(2, 4).sort((a, b) => a.x - b.x);
-    let sortedPoints = [top[0], top[1], bottom[1], bottom[0]];
+  if (approx.rows !== 4) {
+    alert("4隅が認識できませんでした。");
+    approx.delete();
+    return;
+  }
 
-    let dstWidth = 400, dstHeight = 250;
-    let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-      sortedPoints[0].x, sortedPoints[0].y, sortedPoints[1].x, sortedPoints[1].y,
-      sortedPoints[2].x, sortedPoints[2].y, sortedPoints[3].x, sortedPoints[3].y
-    ]);
-    let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight]);
-    let M = cv.getPerspectiveTransform(srcTri, dstTri);
-    let dst = new cv.Mat();
-    cv.warpPerspective(src, dst, M, new cv.Size(dstWidth, dstHeight));
-    // ★重要：ここで画像を明るくする（正規化）
+  // 座標取得とソート（既存ロジック維持）
+  let points = [];
+  for (let i = 0; i < 4; i++) {
+    points.push({ x: approx.data32S[i * 2], y: approx.data32S[i * 2 + 1] });
+  }
+  points.sort((a, b) => a.y - b.y);
+  let top = points.slice(0, 2).sort((a, b) => a.x - b.x);
+  let bottom = points.slice(2, 4).sort((a, b) => a.x - b.x);
+  let sortedPoints = [top[0], top[1], bottom[1], bottom[0]];
+
+  // ★修正：解像度を800x500に引き上げ（ぼやけ防止）
+  let dstWidth = 800; 
+  let dstHeight = 500;
+  
+  // Canvasの物理ピクセルサイズを設定
+  canvas.width = dstWidth;
+  canvas.height = dstHeight;
+
+  let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+    sortedPoints[0].x, sortedPoints[0].y, sortedPoints[1].x, sortedPoints[1].y,
+    sortedPoints[2].x, sortedPoints[2].y, sortedPoints[3].x, sortedPoints[3].y
+  ]);
+  let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, dstWidth, 0, dstWidth, dstHeight, 0, dstHeight]);
+  
+  let M = cv.getPerspectiveTransform(srcTri, dstTri);
+  let dst = new cv.Mat();
+  cv.warpPerspective(src, dst, M, new cv.Size(dstWidth, dstHeight));
+
+  // ★明るさ補正（正規化）
   let normalized = new cv.Mat();
   cv.normalize(dst, normalized, 0, 255, cv.NORM_MINMAX);
-    
-   cv.imshow('outputCanvas', normalized); // 明るい画像を表示
-    normalized.delete();
+
+  // 表示
+  cv.imshow('outputCanvas', normalized);
+
+  // メモリ解放
+  normalized.delete();
   dst.delete();
-    
-    srcTri.delete(); dstTri.delete(); M.delete(); dst.delete(); approx.delete();
-  }
+  M.delete();
+  srcTri.delete();
+  dstTri.delete();
+  approx.delete();
+}
     retryBtn.addEventListener('click', () => {
       actionBtns.style.display = 'none';
       snapBtn.style.display = 'block';
