@@ -239,26 +239,19 @@ function showPage(pageId) {
 }
 
 
+// 検索窓のイベントを修正
 document.getElementById('searchInput').addEventListener('input', (e) => {
   const query = e.target.value.toLowerCase();
-  const list = document.getElementById('resultList');
-  list.innerHTML = ""; // クリア
-
-  // フィルタリング
+  
+  // 検索条件で絞り込み
   const filtered = mockData.filter(item => 
     item.name.toLowerCase().includes(query) || item.company.toLowerCase().includes(query)
   );
 
-  // リスト描画
-  filtered.forEach(item => {
-    const li = document.createElement('li');
-    li.textContent = `${item.name} (${item.company})`;
-    li.style.padding = "10px";
-    li.style.borderBottom = "1px solid #333";
-    li.onclick = () => showDetail(item);
-    list.appendChild(li);
-  });
+  // 絞り込まれた結果をカードとして再描画
+  renderCards(filtered);
 });
+
 
 function showDetail(item) {
   document.getElementById('detailView').style.display = 'block';
@@ -495,7 +488,8 @@ sendBtn.addEventListener('click', async () => {
       renderCards(mockData);
     });
   
-  function renderCards(dataList) {
+// カード描画関数（これで統一）
+function renderCards(dataList) {
   const container = document.getElementById('card-container');
   container.innerHTML = ""; // クリア
 
@@ -505,7 +499,7 @@ sendBtn.addEventListener('click', async () => {
     card.innerHTML = `
       <div>
         <h3>${item.name}</h3>
-        <p>${item.company} | ${item.date}</p>
+        <p>${item.company}</p>
       </div>
       <button class="detail-btn" onclick="openDetail(${item.id})">詳細</button>
     `;
