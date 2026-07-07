@@ -2,7 +2,6 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <style>
 <style>
     body { margin: 0; padding: 0; background: #000; overflow: hidden; }
     
@@ -391,22 +390,17 @@ captureBtn.addEventListener('click', async () => {
   src.delete(); gray.delete(); blur.delete(); canny.delete(); contours.delete(); hierarchy.delete();
 });
 
-// 4. Retry処理
-retryBtn.addEventListener('click', () => {
-  video.style.display = 'block';
-  canvas.style.display = 'none';
-  captureBtn.style.display = 'block';
-  actionBtns.style.display = 'none';
-  guideFrame.style.display = 'block';
-  isDetecting = true;
-  captureCounter = 0;
-  detectLoop();
-  // 送信成功時の処理を少し工夫するなら
-if (response.ok) {
-    alert('サーバーに送信しました');
-    retryBtn.click(); // 送信したら自動的にカメラを再開する
-}
-});
+// 【修正1】retryBtnの不要なコードを削除
+    retryBtn.addEventListener('click', () => {
+      video.style.display = 'block';
+      canvas.style.display = 'none';
+      captureBtn.style.display = 'block';
+      actionBtns.style.display = 'none';
+      guideFrame.style.display = 'block';
+      isDetecting = true;
+      captureCounter = 0;
+      detectLoop();
+    });
 
 // 5. warpPerspective (省略なし)
 function warpPerspective(src, contour) {
@@ -495,8 +489,12 @@ sendBtn.addEventListener('click', async () => {
 });
   
 
-window.addEventListener('load', startCamera);
-
+  // 【追加】ページロード時にカードを表示
+    window.addEventListener('load', () => {
+      startCamera();
+      renderCards(mockData);
+    });
+  
   function renderCards(dataList) {
   const container = document.getElementById('card-container');
   container.innerHTML = ""; // クリア
@@ -514,6 +512,14 @@ window.addEventListener('load', startCamera);
     container.appendChild(card);
   });
 }
+
+ // 【追加】詳細表示用関数
+    function openDetail(id) {
+      const item = mockData.find(d => d.id === id);
+      alert(`詳細表示: ${item.name} - ${item.company}`);
+    } 
+
+
   </script>
 </body>
 </html>
