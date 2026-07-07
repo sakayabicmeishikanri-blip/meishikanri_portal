@@ -174,14 +174,14 @@ function detectLoop() {
   cv.findContours(canny, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
   let found = false;
-  let minArea = (video.videoWidth * video.videoHeight) * 0.08;
-  let maxArea = (video.videoWidth * video.videoHeight) * 0.40;
+  let minArea = (video.videoWidth * video.videoHeight) * 0.03;
+  let maxArea = (video.videoWidth * video.videoHeight) * 0.60;
 
   for (let i = 0; i < contours.size(); ++i) {
     let cnt = contours.get(i);
     let area = cv.contourArea(cnt);
     let approx = new cv.Mat();
-    cv.approxPolyDP(cnt, approx, 0.04 * cv.arcLength(cnt, true), true);
+    cv.approxPolyDP(cnt, approx, 0.06 * cv.arcLength(cnt, true), true);
 
     let rect = cv.boundingRect(cnt);
     let aspectRatio = rect.width / rect.height;
