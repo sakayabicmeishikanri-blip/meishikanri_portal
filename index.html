@@ -51,18 +51,51 @@
   align-items: center;
   z-index: 20;
 }
+    
+ #status-message {
+  position: absolute;
+  top: 10vh; /* 画面の上から10%の位置 */
+  width: 100%;
+  text-align: center;
+  color: white;
+  font-size: 1.2rem;
+  z-index: 5; /* 枠やボタンよりも前面にする */
+  pointer-events: none; /* タップを阻害しないようにする */
+  text-shadow: 0 0 5px rgba(0,0,0,0.8);
+}   
 
-    button {
-      padding: 15px 40px;
-      font-size: 18px;
-      border-radius: 30px;
-      border: none;
-      margin: 5px;
-    }
-    #capture-btn { display: block; } /* 常に表示させておく */
+button {
+  width: 80px;      /* 幅を指定 */
+  height: 80px;     /* 高さを幅と同じにする */
+  border-radius: 50%; /* ここで完全な丸に */
+  border: none;
+  font-size: 14px;
+  margin: 10px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* 少し影をつけると立体的になります */
+  transition: transform 0.2s; /* 押した時の反応 */
+}
+
+/* 押した時に少し沈むエフェクト */
+button:active {
+  transform: scale(0.95);
+}    
+#capture-btn { 
+  display: block;/* 常に表示させておく */
+  background-color: #007bff; /* 青色 */
+  color: white; 
+} 
+    
 #actionBtns { display: none; }   /* 初期状態は非表示 */
-    #sendBtn { background: green; color: white; }
-    #retryBtn { background: red; color: white; }
+    #sendBtn { 
+  background: green; 
+  color: white; 
+  min-width: 120px; /* 文字が変わってもボタン幅を固定 */
+}
+#retryBtn { background: red; color: white; }
     
     #outputCanvas {
   display: none;
@@ -81,6 +114,7 @@
 <div id="camera-container">
   <video id="video" playsinline autoplay></video>
   <div id="guide-frame"></div>
+<div id="status-message">カメラを名刺に向けてください</div>
   <canvas id="outputCanvas"></canvas>
   
   <div id="controls">
@@ -296,12 +330,34 @@ async function uploadDirectly(canvas) {
   }
 } 
 // ボタンの紐付けを確実にする
-// ここが消えていた可能性が高いです
 sendBtn.addEventListener('click', async () => {
-  if (canvas) {
+  // 1. 連打防止：ボタンを無効化
+  sendBtn.disabled = true;
+  const originalText = sendBtn.textContent;
+  sendBtn.textContent = "送信中...";
+
+  try {
     await uploadDirectly(canvas);
-  } else {
-    alert("画像データがありません");
+
+    // 2. 送信成功：ボタン表示を変更
+    sendBtn.textContent = "送信完了";
+    sendBtn.style.backgroundColor = "#28a745"; // 緑色で成功を強調
+
+    // 3. 少し待ってからカメラ画面へ戻る
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // 画面リセット
+    retryBtn.click();
+
+    // 4. ボタンを元の状態に戻す（次の撮影のために）
+    sendBtn.disabled = false;
+    sendBtn.textContent = originalText;
+    sendBtn.style.backgroundColor = ""; // 元の色に戻す
+    
+  } catch (e) {
+    // 失敗時：ボタンを有効に戻す
+    sendBtn.disabled = false;
+    sendBtn.textContent = originalText;
   }
 });
   
