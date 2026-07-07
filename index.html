@@ -63,7 +63,28 @@
   pointer-events: none; /* タップを阻害しないようにする */
   text-shadow: 0 0 5px rgba(0,0,0,0.8);
 }   
+.page { height: 100vh; overflow-y: auto; }
 
+#bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 60px;
+  background: #333;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 100;
+}
+
+#bottom-nav button {
+  background: none;
+  color: white;
+  border: none;
+  font-size: 16px;
+  width: auto; /* 丸ボタンではなく文字ボタンにする */
+  height: auto;
+}
 button {
   width: 80px;      /* 幅を指定 */
   height: 80px;     /* 高さを幅と同じにする */
@@ -109,14 +130,14 @@ button:active {
   <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
 </head>
 <body>
-
+  
+<div id="page-camera" class="page">
 <div id="camera-container">
   <video id="video" playsinline autoplay></video>
   <div id="guide-frame"></div>
 <div id="status-message">カメラを名刺に向けてください</div>
   <canvas id="outputCanvas"></canvas>
-  
-  <div id="controls">
+    <div id="controls">
     <button id="capture-btn">撮影</button>
     <div id="actionBtns" style="display:none;">
       <button id="sendBtn">送信</button>
@@ -124,6 +145,25 @@ button:active {
     </div>
   </div>
 </div>
+
+<div id="page-search" class="page" style="display:none; padding: 20px; color: white;">
+  <h2>名刺検索</h2>
+  
+  <input type="text" id="searchInput" placeholder="名前や会社名を入力..." style="width: 100%; padding: 10px; border-radius: 5px;">
+  
+  <ul id="resultList" style="list-style: none; padding: 0; margin-top: 20px;">
+    </ul>
+
+  <div id="detailView" style="display:none; margin-top: 20px; border: 1px solid #444; padding: 10px;">
+    <button onclick="closeDetail()">閉じる</button>
+    <div id="detailContent"></div>
+  </div>
+</div>
+  
+<nav id="bottom-nav">
+  <button onclick="showPage('page-camera')">撮影</button>
+  <button onclick="showPage('page-search')">検索</button>
+</nav>
   
 <script>  
 const video = document.getElementById('video');
@@ -137,6 +177,57 @@ const retryBtn = document.getElementById('retryBtn');
 let isDetecting = true;
 let captureCounter = 0; // ここに宣言が必要
 
+function showPage(pageId) {
+  // 全ページを隠す
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  // 指定ページを表示
+  document.getElementById(pageId).style.display = 'block';
+  
+  // 撮影ページ以外に切り替えたら認識を止める工夫
+  if (pageId !== 'page-camera') {
+    isDetecting = false;
+  } else {
+    isDetecting = true;
+    detectLoop();
+  }
+}
+// モックデータ
+const mockData = [
+  { id: 1, name: "山田 太郎", company: "株式会社サンプル", image: "url_to_image" },
+  { id: 2, name: "佐藤 花子", company: "デザイン事務所", image: "url_to_image" }
+];
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  const query = e.target.value.toLowerCase();
+  const list = document.getElementById('resultList');
+  list.innerHTML = ""; // クリア
+
+  // フィルタリング
+  const filtered = mockData.filter(item => 
+    item.name.toLowerCase().includes(query) || item.company.toLowerCase().includes(query)
+  );
+
+  // リスト描画
+  filtered.forEach(item => {
+    const li = document.createElement('li');
+    li.textContent = `${item.name} (${item.company})`;
+    li.style.padding = "10px";
+    li.style.borderBottom = "1px solid #333";
+    li.onclick = () => showDetail(item);
+    list.appendChild(li);
+  });
+});
+
+function showDetail(item) {
+  document.getElementById('detailView').style.display = 'block';
+  document.getElementById('detailContent').innerHTML = `<h3>${item.name}</h3><p>${item.company}</p>`;
+}
+
+function closeDetail() {
+  document.getElementById('detailView').style.display = 'none';
+}
+  
+  
 // 1. カメラ起動
 async function startCamera() {
   const constraints = {
