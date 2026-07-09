@@ -512,76 +512,52 @@ function warpPerspective(src, contour) {
   normalized.delete(); dst.delete(); M.delete(); srcTri.delete(); dstTri.delete(); approx.delete();
 }
 
-// 送信機能本体
+// 【送信機能本体】
 async function uploadDirectly(canvas) {
   const base64data = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
-  const fileName = `card_${Date.now()}.jpg`;
-
-
-
-  
+  const fileName = `card_${Date.now()}.jpg`; // ファイル名をここで確定させる
+  const userName = sessionStorage.getItem('userName');
   const cloudRunUrl = 'https://meishikanrirun-308432369710.asia-northeast2.run.app';
-  
-  try {
-    const response = await fetch(cloudRunUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ base64Data: base64data, fileName: fileName })
-    });
+  const gasUrl = 'https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec';
 
-    if (response.ok) {
-      alert('サーバーに送信しました');
-    } else {
-      const err = await response.text();
-      alert('サーバーエラー: ' + err);
-    }
-  } catch (e) {
-    alert('通信失敗（ネットワークまたはCORS）: ' + e.message);
-  }
-} 
-// ボタンの紐付けを確実にする
+  // 1. 撮影ログを先にGASへ送信
+  const logResponse = await fetch(gasUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action: "logCapture", userName: userName, fileName: fileName })
+  });
+  if (!logResponse.ok) throw new Error("ログ保存に失敗しました");
+
+  // 2. 画像本体をCloud Runへ送信
+  const response = await fetch(cloudRunUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base64Data: base64data, fileName: fileName })
+  });
+  if (!response.ok) throw new Error("画像送信失敗: " + await response.text());
+}
+
+// 【ボタンの紐付け】
 sendBtn.addEventListener('click', async () => {
-  // 1. 連打防止：ボタンを無効化
   sendBtn.disabled = true;
   const originalText = sendBtn.textContent;
   sendBtn.textContent = "送信中...";
 
   try {
+    // ここでまとめて実行
     await uploadDirectly(canvas);
 
-    // 2. 送信成功：ボタン表示を変更
     sendBtn.textContent = "送信完了";
-    sendBtn.style.backgroundColor = "#28a745"; // 緑色で成功を強調
-
-    // 3. 少し待ってからカメラ画面へ戻る
+    sendBtn.style.backgroundColor = "#28a745";
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // 画面リセット
     retryBtn.click();
-
-    // 4. ボタンを元の状態に戻す（次の撮影のために）
-    sendBtn.disabled = false;
-    sendBtn.textContent = originalText;
-    sendBtn.style.backgroundColor = ""; // 元の色に戻す
-    
   } catch (e) {
-    // 失敗時：ボタンを有効に戻す
+    alert("エラー: " + e.message);
+  } finally {
     sendBtn.disabled = false;
     sendBtn.textContent = originalText;
+    sendBtn.style.backgroundColor = "";
   }
 });
-
-  // 1. 撮影ログをGASに送信（撮影ログシート用）
-  // ※GAS側のdoPostで action: "logCapture" を受け取るようにしてください
-  const userName = sessionStorage.getItem('userName');
-  await fetch('https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec', {
-    method: 'POST',
-    body: JSON.stringify({
-      action: "logCapture",
-      userName: userName,
-      fileName: fileName
-    })
-      });
   
 
   // 【追加】ページロード時にカードを表示
