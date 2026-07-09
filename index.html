@@ -249,7 +249,6 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     const result = await response.json();
 
     if (result.success) {
-      alert(result.userName + "さん、ログインしました");
       sessionStorage.setItem('isLoggedIn', 'true');
       showPage('page-camera');
       document.getElementById('bottom-nav').style.display = 'flex';
@@ -522,18 +521,16 @@ sendBtn.addEventListener('click', async () => {
   
 
   // 【追加】ページロード時にカードを表示
-    window.addEventListener('load', () => {
-      // すでにログイン済みか確認
+window.addEventListener('load', () => {
+  renderCards(mockData); // カード表示だけは最初に行う
+  // ログイン状態ならカメラを起動する
   if (sessionStorage.getItem('isLoggedIn') === 'true') {
     showPage('page-camera');
     document.getElementById('bottom-nav').style.display = 'flex';
   } else {
     showPage('page-login');
-    document.getElementById('bottom-nav').style.display = 'none'; // メニューは隠す
+    document.getElementById('bottom-nav').style.display = 'none';
   }
-      startCamera();
-      renderCards(mockData);
-      
     });
   
 // カード描画関数（これで統一）
