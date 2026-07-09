@@ -3,8 +3,22 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
-    body { margin: 0; padding: 0; background: #000; overflow: hidden; }
-    
+ body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  overflow: hidden;
+  /* 日本語アプリの定番・美しいフォントスタック */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  -webkit-font-smoothing: antialiased; /* 文字をより滑らかに表示 */
+   letter-spacing: 0.02em; /* 文字間を少し広げると高級感が出ます */
+  line-height: 1.6;      /* 行間を広げると可読性が上がります */
+}
+ /* ログインボタンや入力欄のフォントも合わせる */
+input, button {
+  font-family: inherit; /* bodyで設定したフォントを引き継ぐ */
+}  
+  
 #camera-container {
   position: relative;
   width: 100vw;
