@@ -167,19 +167,34 @@ button:active {
   border-radius: 20px;
   cursor: pointer;
 }
+
+ #page-login {
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* 縦方向の中央 */
+  align-items: center;     /* 横方向の中央 */
+  height: 100vh;           /* 画面全体の高さ */
+  padding: 20px;
+  background: #fff;
+}
+
+/* 入力欄とボタンの親要素を整える */
+.login-box {
+  width: 100%;
+  max-width: 400px; /* スマホでも広がりすぎないように制限 */
+  text-align: center;
+} 
   
   </style>
   <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
 </head>
 <body>
-<div id="page-login" class="page" style="padding: 20px; text-align: center; background: #fff;">
-  <h2>ログイン</h2>
-  <div style="margin-top: 50px;">
-    <input type="text" id="loginId" placeholder="ID" style="width: 80%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px;">
-    <br>
-    <input type="password" id="loginPass" placeholder="パスワード" style="width: 80%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px;">
-    <br>
-    <button id="loginBtn" style="width: 80%; height: 50px; background: #007bff; color: white; border: none; border-radius: 8px; margin-top: 20px;">ログイン</button>
+<div id="page-login" class="page">
+  <div class="login-box">
+    <h2>酒ゃビック名刺管理システム</h2>
+    <input type="text" id="loginId" placeholder="ID" style="width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box;">
+    <input type="password" id="loginPass" placeholder="パスワード" style="width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box;">
+    <button id="loginBtn" style="width: 100%; height: 50px; background: #007bff; color: white; border: none; border-radius: 8px; margin-top: 20px; font-size: 16px;">ログイン</button>
   </div>
 </div>
   
@@ -236,6 +251,11 @@ const mockData = [
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const id = document.getElementById('loginId').value;
   const pass = document.getElementById('loginPass').value;
+  // --- 1. 二度押し防止の開始 ---
+  loginBtn.disabled = true;
+  const originalText = loginBtn.textContent;
+  loginBtn.textContent = "ログイン処理中...";
+  loginBtn.style.backgroundColor = "#ccc"; // 色を変えるとより「押せない」ことが伝わります
   
   // ★ここをGASのデプロイURLに書き換えてください
   const GAS_URL = "https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec"; 
@@ -254,10 +274,18 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
       document.getElementById('bottom-nav').style.display = 'flex';
     } else {
       alert("IDまたはパスワードが違います");
+      // 失敗した時だけボタンを戻す
+      loginBtn.disabled = false;
+      loginBtn.textContent = originalText;
+      loginBtn.style.backgroundColor = "#007bff";
     }
   } catch (e) {
     console.error(e);
     alert("通信エラーが発生しました");
+    // エラー時もボタンを戻す
+    loginBtn.disabled = false;
+    loginBtn.textContent = originalText;
+    loginBtn.style.backgroundColor = "#007bff";
   }
 });
   
