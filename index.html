@@ -267,12 +267,18 @@ function showPage(pageId) {
   // 指定ページを表示
   document.getElementById(pageId).style.display = 'block';
   
-  // 撮影ページ以外に切り替えたら認識を止める工夫
-  if (pageId !== 'page-camera') {
-    isDetecting = false;
-  } else {
+  // 【ここがポイント】撮影ページに移動したときだけカメラを起動する
+  if (pageId === 'page-camera') {
+    // すでにカメラが起動していなければ起動する
+    if (!video.srcObject) {
+      startCamera();
+    }
     isDetecting = true;
     detectLoop();
+  } else {
+    // 撮影ページ以外はカメラを止める
+    isDetecting = false;
+    // 必要であればここでカメラストリームを停止させる処理を入れることも可能
   }
 }
 
