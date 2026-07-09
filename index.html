@@ -516,8 +516,21 @@ function warpPerspective(src, contour) {
 async function uploadDirectly(canvas) {
   const base64data = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
   const fileName = `card_${Date.now()}.jpg`;
-  const cloudRunUrl = 'https://meishikanrirun-308432369710.asia-northeast2.run.app';
 
+// 1. 撮影ログをGASに送信（撮影ログシート用）
+  // ※GAS側のdoPostで action: "logCapture" を受け取るようにしてください
+  const userName = sessionStorage.getItem('userName');
+  await fetch('https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec', {
+    method: 'POST',
+    body: JSON.stringify({
+      action: "logCapture",
+      userName: userName,
+      fileName: fileName
+    })
+  });
+  
+  const cloudRunUrl = 'https://meishikanrirun-308432369710.asia-northeast2.run.app';
+  
   try {
     const response = await fetch(cloudRunUrl, {
       method: 'POST',
