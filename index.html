@@ -172,6 +172,16 @@ button:active {
   <script src="https://cdn.jsdelivr.net/npm/opencv.js@1.2.1/opencv.js"></script>
 </head>
 <body>
+<div id="page-login" class="page" style="padding: 20px; text-align: center; background: #fff;">
+  <h2>ログイン</h2>
+  <div style="margin-top: 50px;">
+    <input type="text" id="loginId" placeholder="ID" style="width: 80%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px;">
+    <br>
+    <input type="password" id="loginPass" placeholder="パスワード" style="width: 80%; padding: 15px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px;">
+    <br>
+    <button id="loginBtn" style="width: 80%; height: 50px; background: #007bff; color: white; border: none; border-radius: 8px; margin-top: 20px;">ログイン</button>
+  </div>
+</div>
   
 <div id="page-camera" class="page">
 <div id="camera-container">
@@ -222,6 +232,28 @@ const mockData = [
   { id: 1, name: "山田 太郎", company: "株式会社サンプル", image: "url_to_image" },
   { id: 2, name: "佐藤 花子", company: "デザイン事務所", image: "url_to_image" }
 ];
+
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const inputId = document.getElementById('loginId').value;
+  const inputPass = document.getElementById('loginPass').value;
+
+  // ここでスプレッドシート上のID/Passと照合するロジックが入ります
+  // まずは仮で「admin / password」として動作確認
+  if (inputId === "admin" && inputPass === "password") {
+   ;
+    
+    // ログイン成功したら撮影ページへ
+    showPage('page-camera');
+    
+    // ログイン成功状態を保存（ページ更新しても保持）
+    sessionStorage.setItem('isLoggedIn', 'true');
+    
+    // ログイン画面自体をナビゲーションから隠すなどの処理
+    document.getElementById('bottom-nav').style.display = 'flex';
+  } else {
+    alert("IDまたはパスワードが違います");
+  }
+});
   
 function showPage(pageId) {
   // 全ページを隠す
@@ -484,8 +516,17 @@ sendBtn.addEventListener('click', async () => {
 
   // 【追加】ページロード時にカードを表示
     window.addEventListener('load', () => {
+      // すでにログイン済みか確認
+  if (sessionStorage.getItem('isLoggedIn') === 'true') {
+    showPage('page-camera');
+    document.getElementById('bottom-nav').style.display = 'flex';
+  } else {
+    showPage('page-login');
+    document.getElementById('bottom-nav').style.display = 'none'; // メニューは隠す
+  }
       startCamera();
       renderCards(mockData);
+      
     });
   
 // カード描画関数（これで統一）
