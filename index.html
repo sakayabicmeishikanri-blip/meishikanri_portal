@@ -233,25 +233,32 @@ const mockData = [
   { id: 2, name: "佐藤 花子", company: "デザイン事務所", image: "url_to_image" }
 ];
 
-document.getElementById('loginBtn').addEventListener('click', () => {
-  const inputId = document.getElementById('loginId').value;
-  const inputPass = document.getElementById('loginPass').value;
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const id = document.getElementById('loginId').value;
+  const pass = document.getElementById('loginPass').value;
+  
+  // ★ここをGASのデプロイURLに書き換えてください
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbyahzhji_-4cQeFxaRvXwI1TaKLaAMLu-atNeEshuG-hvbZrNhgWIejccA9v1K-xOV4/exec"; 
 
-  // ここでスプレッドシート上のID/Passと照合するロジックが入ります
-  // まずは仮で「admin / password」として動作確認
-  if (inputId === "admin" && inputPass === "password") {
-   ;
-    
-    // ログイン成功したら撮影ページへ
-    showPage('page-camera');
-    
-    // ログイン成功状態を保存（ページ更新しても保持）
-    sessionStorage.setItem('isLoggedIn', 'true');
-    
-    // ログイン画面自体をナビゲーションから隠すなどの処理
-    document.getElementById('bottom-nav').style.display = 'flex';
-  } else {
-    alert("IDまたはパスワードが違います");
+  try {
+    const response = await fetch(GAS_URL, {
+      method: 'POST',
+      // モードをno-corsにするとエラーが取れない場合があるので、通常はデフォルト（cors）でGAS側を適切に設定します
+      body: JSON.stringify({ action: "login", id: id, pass: pass })
+    });
+    const result = await response.json();
+
+    if (result.success) {
+      alert(result.userName + "さん、ログインしました");
+      sessionStorage.setItem('isLoggedIn', 'true');
+      showPage('page-camera');
+      document.getElementById('bottom-nav').style.display = 'flex';
+    } else {
+      alert("IDまたはパスワードが違います");
+    }
+  } catch (e) {
+    console.error(e);
+    alert("通信エラーが発生しました");
   }
 });
   
